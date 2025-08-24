@@ -71,7 +71,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    SizedBox(height: 32),
+                    SizedBox(height: 15),
                     _buildPolicySection(
                       title: 'Terms of Service',
                       isDark: isDark,
@@ -84,7 +84,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                         'Limitation of liability',
                       ],
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: 10),
                     _buildPolicySection(
                       title: 'Privacy Policy',
                       isDark: isDark,
@@ -97,7 +97,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                         'Your privacy rights',
                       ],
                     ),
-                    SizedBox(height: 32),
+                    SizedBox(height: 10),
                     _buildCheckboxTile(
                       value: acceptTerms,
                       isDark: isDark,
@@ -106,7 +106,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                       title: 'Terms of Service',
                       linkText: 'Read full terms',
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 10),
                     _buildCheckboxTile(
                       isDark: isDark,
                       value: acceptPrivacy,

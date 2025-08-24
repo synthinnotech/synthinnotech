@@ -38,5 +38,5 @@ class ThemeService {
     elevatedButtonTheme: elevatedButtonThemeData,
   );
 
-  static final isDarkTheme = StateProvider((ref) => true);
+  static final isDarkTheme = StateProvider((ref) => false);
 }

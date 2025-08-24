@@ -1,12 +1,14 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/main.dart';
 import 'package:synthinnotech/service/theme_service.dart';
+import 'package:synthinnotech/view/home_page.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
-import 'package:synthinnotech/widget/custom_text_field.dart';
-import 'package:synthinnotech/widget/login_error_widget.dart';
+import 'package:synthinnotech/widget/login/custom_text_field.dart';
+import 'package:synthinnotech/widget/login/login_error_widget.dart';
 import 'package:synthinnotech/widget/simple_badge.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -55,7 +57,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
     bool isDark = ref.watch(ThemeService.isDarkTheme);
 
     ref.listen(loginViewModelProvider, (previous, next) {
-      if (next.isLoggedIn) {}
+      if (next.isLoggedIn) {
+        Get.offAll(() => HomePage(), transition: Transition.zoom);
+      }
     });
 
     return Scaffold(
@@ -77,18 +81,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         return Transform.translate(
                           offset: Offset(0, _floatingAnimation.value),
                           child: Container(
-                            padding: const EdgeInsets.all(24),
+                            width: 85,
+                            height: 85,
+                            clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  baseColor2,
-                                  baseColor1,
-                                  baseColor3,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(50),
+                              color: baseColor1,
+                              border: Border.all(color: baseColor1, width: 2),
                               boxShadow: [
                                 BoxShadow(
                                   color: baseColor1.withAlpha(80),
@@ -98,8 +97,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.rocket_launch,
-                                color: Colors.white, size: 48),
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundImage:
+                                  AssetImage('assets/images/logo.png'),
+                            ),
                           ),
                         );
                       },
