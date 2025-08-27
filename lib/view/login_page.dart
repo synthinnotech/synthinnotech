@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/main.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/home_page.dart';
+import 'package:synthinnotech/view/main_navigation_screen.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 import 'package:synthinnotech/widget/login/custom_text_field.dart';
 import 'package:synthinnotech/widget/login/login_error_widget.dart';
@@ -58,7 +58,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
     ref.listen(loginViewModelProvider, (previous, next) {
       if (next.isLoggedIn) {
-        Get.offAll(() => HomePage(), transition: Transition.zoom);
+        Get.offAll(() => MainNavigationScreen(), transition: Transition.zoom);
       }
     });
 
@@ -91,9 +91,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               boxShadow: [
                                 BoxShadow(
                                   color: baseColor1.withAlpha(80),
-                                  blurRadius: 25,
+                                  blurRadius: 5,
                                   spreadRadius: 2,
-                                  offset: const Offset(0, 15),
+                                  offset: const Offset(0, 1),
                                 ),
                               ],
                             ),
@@ -147,28 +147,17 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   FadeInUp(
                     delay: const Duration(milliseconds: 500),
                     child: Container(
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(26),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Theme.of(context)
-                                .scaffoldBackgroundColor
-                                .withAlpha(100)
-                            : Colors.white,
+                        color:
+                            isDark ? Colors.grey.withAlpha(50) : Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                            color: baseColor2.withAlpha(65), width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: baseColor1.withAlpha(50),
-                            blurRadius: 30,
+                            color: Colors.black.withAlpha(50),
+                            blurRadius: 5,
                             spreadRadius: 0,
-                            offset: const Offset(0, 20),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withAlpha(25),
-                            blurRadius: 10,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 5),
+                            offset: const Offset(0, 1),
                           ),
                         ],
                       ),

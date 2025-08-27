@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/widget/home/recent_activity_widget.dart';
+
 import 'package:synthinnotech/view_model/expense_view_model.dart';
 import 'package:synthinnotech/view_model/home_view_model.dart';
 import 'package:synthinnotech/view_model/project_view_model.dart';
 import 'package:synthinnotech/widget/home/active_project_widget.dart';
 import 'package:synthinnotech/widget/home/dashboard_stats_widget.dart';
 import 'package:synthinnotech/widget/home/quick_actions_widget.dart';
-import 'package:synthinnotech/widget/home/recent_activity_widget.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -20,6 +21,7 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
@@ -46,9 +48,7 @@ class HomePage extends ConsumerWidget {
             children: [
               IconButton(
                 onPressed: () {},
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                ),
+                icon: Icon(Icons.notifications_outlined),
               ),
               Positioned(
                 right: 12,
@@ -66,8 +66,12 @@ class HomePage extends ConsumerWidget {
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.search),
+            icon: Icon(Icons.assignment),
           ),
+          PopupMenuButton(
+            itemBuilder: (ctx) => [],
+          ),
+          SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(
@@ -86,6 +90,7 @@ class HomePage extends ConsumerWidget {
               ActiveProjectWidget(projects: projects),
               const SizedBox(height: 24),
               RecentActivityWidget(expenses: recentExpenses),
+              const SizedBox(height: 80), // Extra padding for bottom bar
             ],
           ),
         ),
