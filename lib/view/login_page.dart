@@ -57,7 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     bool isDark = ref.watch(ThemeService.isDarkTheme);
 
     ref.listen(loginViewModelProvider, (previous, next) {
-      if (next.isLoggedIn) {
+      if (next.user != null) {
         Get.offAll(() => MainNavigationScreen(), transition: Transition.zoom);
       }
     });

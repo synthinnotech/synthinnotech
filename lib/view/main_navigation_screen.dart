@@ -1,11 +1,11 @@
+import 'package:curved_labeled_navigation_bar/curved_navigation_bar.dart';
+import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/main.dart';
-import 'package:curved_labeled_navigation_bar/curved_navigation_bar.dart';
-import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
-import 'package:synthinnotech/view/chat_screen.dart';
 import 'package:synthinnotech/view/expenses_screen.dart';
 import 'package:synthinnotech/view/home_page.dart';
+import 'package:synthinnotech/view/people_screen.dart';
 import 'package:synthinnotech/view/projects_screen.dart';
 import 'package:synthinnotech/view/settings_screen.dart';
 
@@ -18,7 +18,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
-  TabController? _tabController;
+  late TabController _tabController;
   int _currentIndex = 2;
 
   @override
@@ -29,7 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   @override
   void dispose() {
-    _tabController?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -41,115 +41,71 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         physics: const NeverScrollableScrollPhysics(),
         controller: _tabController,
         children: const [
-          ProjectsScreen(),
           ExpensesScreen(),
+          ProjectsScreen(),
           HomePage(),
-          ChatScreen(),
+          PeopleScreen(),
           SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: _buildCurvedNavigationBar(),
+      bottomNavigationBar: _buildNav(),
     );
   }
 
-  Widget _buildCurvedNavigationBar() {
+  Widget _buildNav() {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(20),
-            blurRadius: 10,
-            offset: const Offset(0, -10),
-            spreadRadius: 0,
+            blurRadius: 12,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: CurvedNavigationBar(
         index: _currentIndex,
         height: 65,
-        items: _buildNavigationItems(),
         color: baseColor1,
         buttonBackgroundColor: baseColor3,
-        animationCurve: Curves.easeInOutCubicEmphasized,
         backgroundColor: Colors.transparent,
+        animationCurve: Curves.easeInOutCubicEmphasized,
         animationDuration: const Duration(milliseconds: 400),
         onTap: (index) {
           setState(() {
             _currentIndex = index;
-            _tabController!.animateTo(index);
+            _tabController.animateTo(index);
           });
         },
-        letIndexChange: (index) => true,
+        items: _navItems(),
       ),
     );
   }
 
-  List<CurvedNavigationBarItem> _buildNavigationItems() {
-    final List<Map<String, dynamic>> navItems = [
-      {
-        'icon': Icons.folder_outlined,
-        'label': 'Projects',
-        'size': 24.0,
-        'index': 0,
-      },
-      {
-        'icon': Icons.account_balance_wallet_outlined,
-        'label': 'Expenses',
-        'size': 24.0,
-        'index': 1,
-      },
-      {
-        'icon': Icons.home,
-        'label': 'Home',
-        'size': 26.0,
-        'index': 2,
-      },
-      {
-        'icon': Icons.chat_bubble_outline,
-        'label': 'Chat',
-        'size': 24.0,
-        'index': 3,
-      },
-      {
-        'icon': Icons.settings_outlined,
-        'label': 'Settings',
-        'size': 24.0,
-        'index': 4,
-      },
+  List<CurvedNavigationBarItem> _navItems() {
+    final items = [
+      (Icons.account_balance_wallet_outlined, 'Finance', 0),
+      (Icons.folder_outlined, 'Projects', 1),
+      (Icons.home_rounded, 'Home', 2),
+      (Icons.people_outline, 'People', 3),
+      (Icons.settings_outlined, 'Settings', 4),
     ];
 
-    return navItems
-        .map((item) => _buildNavigationBarItem(
-              icon: item['icon'],
-              label: item['label'],
-              size: item['size'],
-              index: item['index'],
-            ))
-        .toList();
-  }
-
-  CurvedNavigationBarItem _buildNavigationBarItem({
-    required IconData icon,
-    required String label,
-    required double size,
-    required int index,
-  }) {
-    final bool isSelected = _currentIndex == index;
-    final bool isHome = index == 2;
-
-    return CurvedNavigationBarItem(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: size, color: isSelected ? baseColor2 : Colors.white),
-        ],
-      ),
-      label: label,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: isHome ? FontWeight.w600 : FontWeight.w500,
-        color: isSelected ? Colors.black : Colors.white,
-      ),
-    );
+    return items.map((item) {
+      final isSelected = _currentIndex == item.$3;
+      return CurvedNavigationBarItem(
+        child: Icon(
+          item.$1,
+          size: item.$3 == 2 ? 28 : 24,
+          color: isSelected ? baseColor2 : Colors.white,
+        ),
+        label: item.$2,
+        labelStyle: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: item.$3 == 2 ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? Colors.white : Colors.white70,
+        ),
+      );
+    }).toList();
   }
 }

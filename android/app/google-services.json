@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "917918626271",
+    "project_id": "synthinnotech-pvt",
+    "storage_bucket": "synthinnotech-pvt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:917918626271:android:a92c8d7ddb7c889394946a",
+        "android_client_info": {
+          "package_name": "com.example.synthinnotech"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtNqcyAyGtUVB2KSsx_bsja1e1X41UgDA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

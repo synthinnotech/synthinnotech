@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synthinnotech/main.dart';
 import 'package:synthinnotech/service/police_service.dart';
 import 'package:synthinnotech/service/theme_service.dart';
@@ -21,11 +22,18 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text(
-          'Terms & Privacy',
-          style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : Colors.black),
+        title: Row(
+          children: [
+            Icon(Icons.privacy_tip_outlined,
+                size: 25, color: isDark ? Colors.white : Colors.black),
+            SizedBox(width: 8),
+            Text(
+              'Terms & Privacy',
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black),
+            ),
+          ],
         ),
       ),
       body: SafeArea(
@@ -35,9 +43,9 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
+                      width: double.infinity,
                       padding: EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color:
@@ -63,10 +71,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                           Text(
                             'Please review and accept our policies to continue',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              height: 1.4,
-                            ),
+                            style: TextStyle(fontSize: 16, height: 1.4),
                           ),
                         ],
                       ),
@@ -128,7 +133,9 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                 height: 55,
                 child: ElevatedButton(
                   onPressed: canContinue
-                      ? () {
+                      ? () async {
+                          final pref = await SharedPreferences.getInstance();
+                          await pref.setBool('policy', true);
                           Get.off(() => LoginPage(),
                               transition: Transition.downToUp);
                         }
@@ -168,15 +175,10 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          Text(title,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           SizedBox(height: 8),
-          Text(
-            description,
-            style: TextStyle(fontSize: 14, height: 1.4),
-          ),
+          Text(description, style: TextStyle(fontSize: 14, height: 1.4)),
           SizedBox(height: 12),
           ...highlights.map(
             (highlight) => Padding(
@@ -185,10 +187,7 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.check_circle_outline, size: 16, color: baseColor1),
                   SizedBox(width: 8),
-                  Text(
-                    highlight,
-                    style: TextStyle(fontSize: 13),
-                  ),
+                  Text(highlight, style: TextStyle(fontSize: 13)),
                 ],
               ),
             ),
