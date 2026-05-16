@@ -1,34 +1,86 @@
+import 'dart:async';
+
 import 'package:curved_labeled_navigation_bar/curved_navigation_bar.dart';
 import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/service/chat_service.dart';
+import 'package:synthinnotech/service/notification_service.dart';
+import 'package:synthinnotech/view/chat_conversation_screen.dart';
 import 'package:synthinnotech/view/expenses_screen.dart';
 import 'package:synthinnotech/view/home_page.dart';
 import 'package:synthinnotech/view/people_screen.dart';
 import 'package:synthinnotech/view/projects_screen.dart';
 import 'package:synthinnotech/view/settings_screen.dart';
+import 'package:synthinnotech/view_model/login_view_model.dart';
 
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen>
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 2;
+  StreamSubscription<List<Map<String, dynamic>>>? _chatSub;
+  String? _lastConvUpdateTime;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(initialIndex: 2, length: 5, vsync: this);
+    // Delay to let the auth state settle before starting listener.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _setupChatListener());
+  }
+
+  void _setupChatListener() {
+    final user = ref.read(loginViewModelProvider).user;
+    if (user == null) return;
+
+    ChatService.saveMyFCMToken(user.uid);
+
+    _chatSub = ChatService.conversationStream(user.uid).listen((convs) {
+      if (convs.isEmpty) return;
+      final latest = convs.first;
+      final updatedAt = latest['updated_at']?.toString() ?? '';
+      final lastSenderId = latest['last_sender_id']?.toString() ?? '';
+      final chatDocId = latest['id']?.toString() ?? '';
+
+      if (_lastConvUpdateTime != null &&
+          updatedAt != _lastConvUpdateTime &&
+          lastSenderId != user.uid &&
+          ChatConversationScreen.activeChatId != chatDocId) {
+        final participants =
+            List<String>.from(latest['participants'] ?? []);
+        final peerUid = participants.firstWhere(
+          (id) => id != user.uid,
+          orElse: () => '',
+        );
+        final names = Map<String, dynamic>.from(
+            latest['participant_names'] ?? {});
+        final peerName = names[peerUid]?.toString() ?? 'New message';
+        final lastMsg = latest['last_message']?.toString() ?? '';
+
+        NotificationService.showNotification(
+          title: peerName,
+          body: lastMsg,
+          channelKey: 'chat_channel',
+          withActions: false,
+        );
+      }
+      _lastConvUpdateTime = updatedAt;
+    });
   }
 
   @override
   void dispose() {
+    _chatSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }

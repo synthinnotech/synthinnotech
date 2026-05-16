@@ -35,6 +35,16 @@ class NotificationService {
           defaultColor: successColor,
           ledColor: successColor,
         ),
+        NotificationChannel(
+          channelKey: 'chat_channel',
+          channelName: 'Chat Notifications',
+          channelDescription: 'Notifications for new chat messages',
+          importance: NotificationImportance.High,
+          defaultColor: primaryColor,
+          ledColor: primaryColor,
+          enableVibration: true,
+          playSound: true,
+        ),
       ],
       debug: true,
     );

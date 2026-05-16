@@ -5,30 +5,60 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/model/employee/employee_model.dart';
 import 'package:synthinnotech/view_model/employee_view_model.dart';
 
-class AddEmployeeScreen extends ConsumerStatefulWidget {
-  const AddEmployeeScreen({super.key});
+class EditEmployeeScreen extends ConsumerStatefulWidget {
+  final EmployeeModel employee;
+  const EditEmployeeScreen({super.key, required this.employee});
 
   @override
-  ConsumerState<AddEmployeeScreen> createState() => _AddEmployeeScreenState();
+  ConsumerState<EditEmployeeScreen> createState() => _EditEmployeeScreenState();
 }
 
-class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
+class _EditEmployeeScreenState extends ConsumerState<EditEmployeeScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _departmentCtrl = TextEditingController();
-  final _jobTitleCtrl = TextEditingController();
-  final _salaryCtrl = TextEditingController();
-  EmployeeRole _role = EmployeeRole.employee;
-  bool _isActive = true;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _departmentCtrl;
+  late final TextEditingController _jobTitleCtrl;
+  late final TextEditingController _salaryCtrl;
+  late final TextEditingController _addressCtrl;
+  late EmployeeRole _role;
+  late bool _isActive;
+  String? _gender;
+  DateTime? _dateOfBirth;
+  DateTime? _joinDate;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.employee.name);
+    _emailCtrl = TextEditingController(text: widget.employee.email);
+    _phoneCtrl = TextEditingController(text: widget.employee.phone);
+    _addressCtrl =
+        TextEditingController(text: widget.employee.address ?? '');
+    _departmentCtrl =
+        TextEditingController(text: widget.employee.department ?? '');
+    _jobTitleCtrl =
+        TextEditingController(text: widget.employee.jobTitle ?? '');
+    _salaryCtrl = TextEditingController(
+      text: widget.employee.salary > 0
+          ? widget.employee.salary.toStringAsFixed(0)
+          : '',
+    );
+    _role = widget.employee.role;
+    _isActive = widget.employee.isActive;
+    _gender = widget.employee.gender;
+    _dateOfBirth = widget.employee.dateOfBirth;
+    _joinDate = widget.employee.joinDate;
+  }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _addressCtrl.dispose();
     _departmentCtrl.dispose();
     _jobTitleCtrl.dispose();
     _salaryCtrl.dispose();
@@ -41,7 +71,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Employee',
+        title: Text('Edit Employee',
             style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -80,6 +110,27 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
             ),
+            const SizedBox(height: 14),
+            _GenderDropdown(
+              value: _gender,
+              onChanged: (v) => setState(() => _gender = v),
+            ),
+            const SizedBox(height: 14),
+            _DatePickerTile(
+              label: 'Date of Birth',
+              value: _dateOfBirth,
+              onPick: () => _pickDateOfBirth(context),
+              onClear: _dateOfBirth != null
+                  ? () => setState(() => _dateOfBirth = null)
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            _Field(
+              controller: _addressCtrl,
+              label: 'Address',
+              icon: Icons.location_on_outlined,
+              maxLines: 2,
+            ),
             const SizedBox(height: 24),
             _SectionLabel('Work Info'),
             const SizedBox(height: 12),
@@ -106,6 +157,15 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
               icon: Icons.currency_rupee,
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 14),
+            _DatePickerTile(
+              label: 'Joining Date',
+              value: _joinDate,
+              onPick: () => _pickJoinDate(context),
+              onClear: _joinDate != null
+                  ? () => setState(() => _joinDate = null)
+                  : null,
+            ),
             const SizedBox(height: 20),
             _ActiveToggle(
               value: _isActive,
@@ -124,7 +184,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
                 child: _isSaving
                     ? const CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2)
-                    : Text('Add Employee',
+                    : Text('Save Changes',
                         style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -137,12 +197,33 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
     );
   }
 
+  Future<void> _pickDateOfBirth(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ??
+          DateTime.now().subtract(const Duration(days: 365 * 25)),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _dateOfBirth = picked);
+  }
+
+  Future<void> _pickJoinDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _joinDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _joinDate = picked);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final employee = EmployeeModel(
-      id: '',
+    final updated = EmployeeModel(
+      id: widget.employee.id,
       name: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
@@ -150,15 +231,20 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
       department: _departmentCtrl.text.trim().isEmpty
           ? null
           : _departmentCtrl.text.trim(),
-      jobTitle:
-          _jobTitleCtrl.text.trim().isEmpty ? null : _jobTitleCtrl.text.trim(),
+      jobTitle: _jobTitleCtrl.text.trim().isEmpty
+          ? null
+          : _jobTitleCtrl.text.trim(),
       salary: double.tryParse(_salaryCtrl.text.trim()) ?? 0,
+      profileImageUrl: widget.employee.profileImageUrl,
       isActive: _isActive,
-      joinDate: DateTime.now(),
-      createdAt: DateTime.now(),
+      address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+      gender: _gender,
+      dateOfBirth: _dateOfBirth,
+      joinDate: _joinDate,
+      createdAt: widget.employee.createdAt,
     );
 
-    await ref.read(employeesViewModelProvider.notifier).addEmployee(employee);
+    await ref.read(employeesViewModelProvider.notifier).updateEmployee(updated);
     setState(() => _isSaving = false);
     Get.back();
   }
@@ -170,15 +256,12 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: GoogleFonts.inter(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-        letterSpacing: 0.5,
-      ),
-    );
+    return Text(text,
+        style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+            letterSpacing: 0.5));
   }
 }
 
@@ -186,6 +269,7 @@ class _Field extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final int maxLines;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
 
@@ -193,6 +277,7 @@ class _Field extends StatelessWidget {
     required this.controller,
     required this.label,
     required this.icon,
+    this.maxLines = 1,
     this.keyboardType = TextInputType.text,
     this.validator,
   });
@@ -202,6 +287,7 @@ class _Field extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return TextFormField(
       controller: controller,
+      maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
       style: GoogleFonts.inter(fontSize: 15),
@@ -312,15 +398,13 @@ class _ActiveToggle extends StatelessWidget {
               children: [
                 Text('Active Employee',
                     style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
-                    )),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface)),
                 Text('Currently working at the company',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withAlpha(130),
-                    )),
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withAlpha(130))),
               ],
             ),
           ),
@@ -330,6 +414,117 @@ class _ActiveToggle extends StatelessWidget {
             activeColor: colorScheme.primary,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GenderDropdown extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  const _GenderDropdown({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const options = ['Male', 'Female', 'Other', 'Prefer not to say'];
+
+    return DropdownButtonFormField<String>(
+      value: options.contains(value) ? value : null,
+      hint: Text('Select Gender', style: GoogleFonts.inter(fontSize: 14)),
+      onChanged: onChanged,
+      style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),
+      decoration: InputDecoration(
+        labelText: 'Gender',
+        labelStyle: GoogleFonts.inter(fontSize: 14),
+        prefixIcon:
+            Icon(Icons.person_outline, size: 20, color: colorScheme.primary),
+        filled: true,
+        fillColor: colorScheme.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.onSurface.withAlpha(30)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.onSurface.withAlpha(30)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      items: options
+          .map((g) => DropdownMenuItem(
+                value: g,
+                child: Text(g, style: GoogleFonts.inter(fontSize: 14)),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class _DatePickerTile extends StatelessWidget {
+  final String label;
+  final DateTime? value;
+  final VoidCallback onPick;
+  final VoidCallback? onClear;
+
+  const _DatePickerTile({
+    required this.label,
+    required this.value,
+    required this.onPick,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    return GestureDetector(
+      onTap: onPick,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colorScheme.onSurface.withAlpha(30)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cake_outlined, size: 20, color: colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                value == null
+                    ? label
+                    : '${months[value!.month - 1]} ${value!.day}, ${value!.year}',
+                style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: value == null
+                        ? colorScheme.onSurface.withAlpha(100)
+                        : colorScheme.onSurface),
+              ),
+            ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close,
+                    size: 18,
+                    color: colorScheme.onSurface.withAlpha(120)),
+              )
+            else
+              Icon(Icons.chevron_right,
+                  color: colorScheme.onSurface.withAlpha(80)),
+          ],
+        ),
       ),
     );
   }

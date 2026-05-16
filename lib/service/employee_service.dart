@@ -10,8 +10,7 @@ class EmployeeService {
   static Future<List<EmployeeModel>> getEmployees() async {
     if (_ready) {
       try {
-        final snap =
-            await FirebaseFirestore.instance.collection(_col).get();
+        final snap = await FirebaseFirestore.instance.collection(_col).get();
         return snap.docs
             .map((d) => EmployeeModel.fromJson(d.data(), d.id))
             .toList();
@@ -89,42 +88,6 @@ class EmployeeService {
           salary: 70000,
           isActive: true,
           joinDate: DateTime(2022, 6, 1),
-        ),
-        EmployeeModel(
-          id: 'e4',
-          name: 'Sneha Patel',
-          email: 'sneha@synthinnotech.com',
-          phone: '+91 98765 43213',
-          role: EmployeeRole.employee,
-          department: 'Design',
-          jobTitle: 'UI/UX Designer',
-          salary: 65000,
-          isActive: true,
-          joinDate: DateTime(2022, 8, 10),
-        ),
-        EmployeeModel(
-          id: 'e5',
-          name: 'Rahul Singh',
-          email: 'rahul@synthinnotech.com',
-          phone: '+91 98765 43214',
-          role: EmployeeRole.admin,
-          department: 'Operations',
-          jobTitle: 'Operations Manager',
-          salary: 85000,
-          isActive: true,
-          joinDate: DateTime(2022, 2, 20),
-        ),
-        EmployeeModel(
-          id: 'e6',
-          name: 'Kavya Reddy',
-          email: 'kavya@synthinnotech.com',
-          phone: '+91 98765 43215',
-          role: EmployeeRole.intern,
-          department: 'Technology',
-          jobTitle: 'Backend Intern',
-          salary: 15000,
-          isActive: true,
-          joinDate: DateTime(2024, 1, 15),
         ),
       ];
 }

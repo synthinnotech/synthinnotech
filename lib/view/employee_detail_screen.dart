@@ -2,8 +2,11 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/model/employee/employee_model.dart';
+import 'package:synthinnotech/view/chat_conversation_screen.dart';
+import 'package:synthinnotech/view/edit_employee_screen.dart';
 import 'package:synthinnotech/view_model/employee_view_model.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
@@ -12,7 +15,12 @@ class EmployeeDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final roleColor = employee.role.color;
+    final employees = ref.watch(employeesViewModelProvider).employees;
+    final current = employees.isEmpty
+        ? employee
+        : employees.firstWhere((e) => e.id == employee.id, orElse: () => employee);
+
+    final roleColor = current.role.color;
     final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     return Scaffold(
@@ -36,9 +44,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    _AvatarLarge(employee: employee),
+                    _AvatarLarge(employee: current),
                     const SizedBox(height: 12),
-                    Text(employee.name,
+                    Text(current.name,
                         style: GoogleFonts.inter(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -54,7 +62,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                             color: Colors.white.withAlpha(40),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(employee.role.label,
+                          child: Text(current.role.label,
                               style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -74,14 +82,14 @@ class EmployeeDetailScreen extends ConsumerWidget {
                                   width: 6,
                                   height: 6,
                                   decoration: BoxDecoration(
-                                    color: employee.isActive
+                                    color: current.isActive
                                         ? Colors.greenAccent
                                         : Colors.grey.shade300,
                                     shape: BoxShape.circle,
                                   )),
                               const SizedBox(width: 5),
                               Text(
-                                  employee.isActive ? 'Active' : 'Inactive',
+                                  current.isActive ? 'Active' : 'Inactive',
                                   style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
@@ -99,26 +107,40 @@ class EmployeeDetailScreen extends ConsumerWidget {
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (v) {
-                  if (v == 'toggle') {
-                    _toggleActive(ref);
+                  if (v == 'edit') {
+                    Get.to(() => EditEmployeeScreen(employee: current));
+                  } else if (v == 'toggle') {
+                    _toggleActive(ref, current);
                   } else if (v == 'delete') {
-                    _confirmDelete(context, ref);
+                    _confirmDelete(context, ref, current);
                   }
                 },
                 itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Edit', style: GoogleFonts.inter()),
+                      ],
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'toggle',
                     child: Row(
                       children: [
                         Icon(
-                          employee.isActive
+                          current.isActive
                               ? Icons.pause_circle_outline
                               : Icons.play_circle_outline,
                           size: 18,
-                          color: employee.isActive ? Colors.orange : Colors.green,
+                          color: current.isActive ? Colors.orange : Colors.green,
                         ),
                         const SizedBox(width: 8),
-                        Text(employee.isActive ? 'Deactivate' : 'Activate',
+                        Text(current.isActive ? 'Deactivate' : 'Activate',
                             style: GoogleFonts.inter()),
                       ],
                     ),
@@ -140,9 +162,34 @@ class EmployeeDetailScreen extends ConsumerWidget {
             ],
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 60),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                FadeInUp(
+                  duration: const Duration(milliseconds: 200),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Get.to(
+                            () => ChatConversationScreen(peer: current)),
+                        icon: const Icon(Icons.chat_bubble_outline,
+                            size: 20),
+                        label: Text('Send Message',
+                            style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: roleColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 FadeInUp(
                   duration: const Duration(milliseconds: 350),
                   child: _Card(
@@ -154,25 +201,25 @@ class EmployeeDetailScreen extends ConsumerWidget {
                         _InfoRow(
                           icon: Icons.email_outlined,
                           label: 'Email',
-                          value: employee.email,
+                          value: current.email,
                           color: const Color(0xFF2196F3),
                         ),
-                        if (employee.phone.isNotEmpty) ...[
+                        if (current.phone.isNotEmpty) ...[
                           const SizedBox(height: 10),
                           _InfoRow(
                             icon: Icons.phone_outlined,
                             label: 'Phone',
-                            value: employee.phone,
+                            value: current.phone,
                             color: const Color(0xFF4CAF50),
                           ),
                         ],
-                        if (employee.address != null &&
-                            employee.address!.isNotEmpty) ...[
+                        if (current.address != null &&
+                            current.address!.isNotEmpty) ...[
                           const SizedBox(height: 10),
                           _InfoRow(
                             icon: Icons.location_on_outlined,
                             label: 'Address',
-                            value: employee.address!,
+                            value: current.address!,
                             color: const Color(0xFFFF9800),
                           ),
                         ],
@@ -190,40 +237,40 @@ class EmployeeDetailScreen extends ConsumerWidget {
                       children: [
                         _Label('Work Details'),
                         const SizedBox(height: 12),
-                        if (employee.jobTitle != null) ...[
+                        if (current.jobTitle != null) ...[
                           _InfoRow(
                             icon: Icons.work_outline,
                             label: 'Job Title',
-                            value: employee.jobTitle!,
+                            value: current.jobTitle!,
                             color: roleColor,
                           ),
                           const SizedBox(height: 10),
                         ],
-                        if (employee.department != null) ...[
+                        if (current.department != null) ...[
                           _InfoRow(
                             icon: Icons.business_outlined,
                             label: 'Department',
-                            value: employee.department!,
+                            value: current.department!,
                             color: const Color(0xFF9C27B0),
                           ),
                           const SizedBox(height: 10),
                         ],
-                        if (employee.salary > 0) ...[
+                        if (current.salary > 0) ...[
                           _InfoRow(
                             icon: Icons.currency_rupee,
                             label: 'Salary',
                             value:
-                                '₹${employee.salary.toStringAsFixed(0)} / month',
+                                '₹${current.salary.toStringAsFixed(0)} / month',
                             color: const Color(0xFF4CAF50),
                           ),
                           const SizedBox(height: 10),
                         ],
-                        if (employee.joinDate != null) ...[
+                        if (current.joinDate != null) ...[
                           _InfoRow(
                             icon: Icons.calendar_today_outlined,
                             label: 'Joined',
                             value:
-                                '${months[employee.joinDate!.month - 1]} ${employee.joinDate!.day}, ${employee.joinDate!.year}',
+                                '${months[current.joinDate!.month - 1]} ${current.joinDate!.day}, ${current.joinDate!.year}',
                             color: const Color(0xFF2196F3),
                           ),
                         ],
@@ -231,8 +278,8 @@ class EmployeeDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (employee.gender != null ||
-                    employee.dateOfBirth != null) ...[
+                if (current.gender != null ||
+                    current.dateOfBirth != null) ...[
                   const SizedBox(height: 16),
                   FadeInUp(
                     delay: const Duration(milliseconds: 160),
@@ -243,21 +290,21 @@ class EmployeeDetailScreen extends ConsumerWidget {
                         children: [
                           _Label('Personal'),
                           const SizedBox(height: 12),
-                          if (employee.gender != null) ...[
+                          if (current.gender != null) ...[
                             _InfoRow(
                               icon: Icons.person_outline,
                               label: 'Gender',
-                              value: employee.gender!,
+                              value: current.gender!,
                               color: roleColor,
                             ),
                             const SizedBox(height: 10),
                           ],
-                          if (employee.dateOfBirth != null)
+                          if (current.dateOfBirth != null)
                             _InfoRow(
                               icon: Icons.cake_outlined,
                               label: 'Date of Birth',
                               value:
-                                  '${months[employee.dateOfBirth!.month - 1]} ${employee.dateOfBirth!.day}, ${employee.dateOfBirth!.year}',
+                                  '${months[current.dateOfBirth!.month - 1]} ${current.dateOfBirth!.day}, ${current.dateOfBirth!.year}',
                               color: const Color(0xFFFF9800),
                             ),
                         ],
@@ -273,18 +320,34 @@ class EmployeeDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleActive(WidgetRef ref) {
-    // Update via the employees view model — for now just reload
-    ref.read(employeesViewModelProvider.notifier).load();
+  void _toggleActive(WidgetRef ref, EmployeeModel current) {
+    final toggled = EmployeeModel(
+      id: current.id,
+      name: current.name,
+      email: current.email,
+      phone: current.phone,
+      role: current.role,
+      department: current.department,
+      jobTitle: current.jobTitle,
+      salary: current.salary,
+      profileImageUrl: current.profileImageUrl,
+      isActive: !current.isActive,
+      address: current.address,
+      gender: current.gender,
+      dateOfBirth: current.dateOfBirth,
+      joinDate: current.joinDate,
+      createdAt: current.createdAt,
+    );
+    ref.read(employeesViewModelProvider.notifier).updateEmployee(toggled);
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, EmployeeModel current) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete Employee',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        content: Text('Remove ${employee.name} from the system?',
+        content: Text('Remove ${current.name} from the system?',
             style: GoogleFonts.inter(fontSize: 14)),
         actions: [
           TextButton(
@@ -297,7 +360,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
               Navigator.pop(ctx);
               ref
                   .read(employeesViewModelProvider.notifier)
-                  .deleteEmployee(employee.id);
+                  .deleteEmployee(current.id);
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

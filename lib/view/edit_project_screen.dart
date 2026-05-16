@@ -5,23 +5,40 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/model/home/project.dart';
 import 'package:synthinnotech/view_model/project_view_model.dart';
 
-class AddProjectScreen extends ConsumerStatefulWidget {
-  const AddProjectScreen({super.key});
+class EditProjectScreen extends ConsumerStatefulWidget {
+  final Project project;
+  const EditProjectScreen({super.key, required this.project});
 
   @override
-  ConsumerState<AddProjectScreen> createState() => _AddProjectScreenState();
+  ConsumerState<EditProjectScreen> createState() => _EditProjectScreenState();
 }
 
-class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
+class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _clientCtrl = TextEditingController();
-  final _budgetCtrl = TextEditingController();
-  ProjectStatus _status = ProjectStatus.available;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _clientCtrl;
+  late final TextEditingController _budgetCtrl;
+  late ProjectStatus _status;
   DateTime? _startDate;
   DateTime? _deadline;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.project.name);
+    _descCtrl = TextEditingController(text: widget.project.description);
+    _clientCtrl = TextEditingController(text: widget.project.clientName);
+    _budgetCtrl = TextEditingController(
+      text: widget.project.budget > 0
+          ? widget.project.budget.toStringAsFixed(0)
+          : '',
+    );
+    _status = widget.project.status;
+    _startDate = widget.project.startDate;
+    _deadline = widget.project.deadline;
+  }
 
   @override
   void dispose() {
@@ -38,7 +55,7 @@ class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('New Project',
+        title: Text('Edit Project',
             style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -92,12 +109,18 @@ class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
               placeholder: 'Select Start Date (optional)',
               value: _startDate,
               onPick: () => _pickStartDate(context),
+              onClear: _startDate != null
+                  ? () => setState(() => _startDate = null)
+                  : null,
             ),
             const SizedBox(height: 12),
             _DeadlinePicker(
               placeholder: 'Select Deadline (optional)',
               value: _deadline,
               onPick: () => _pickDeadline(context),
+              onClear: _deadline != null
+                  ? () => setState(() => _deadline = null)
+                  : null,
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -112,7 +135,7 @@ class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
                 child: _isSaving
                     ? const CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2)
-                    : Text('Create Project',
+                    : Text('Save Changes',
                         style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -149,19 +172,23 @@ class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final project = Project(
-      id: '',
+    final updated = Project(
+      id: widget.project.id,
       name: _nameCtrl.text.trim(),
       description: _descCtrl.text.trim(),
       clientName: _clientCtrl.text.trim(),
       status: _status,
+      progress: widget.project.progress,
       budget: double.tryParse(_budgetCtrl.text.trim()) ?? 0,
+      spent: widget.project.spent,
       startDate: _startDate,
       deadline: _deadline,
-      createdAt: DateTime.now(),
+      teamMemberIds: widget.project.teamMemberIds,
+      createdBy: widget.project.createdBy,
+      createdAt: widget.project.createdAt,
     );
 
-    await ref.read(projectsViewModelProvider.notifier).addProject(project);
+    await ref.read(projectsViewModelProvider.notifier).updateProject(updated);
     setState(() => _isSaving = false);
     Get.back();
   }
@@ -242,18 +269,22 @@ class _StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final statuses = [
+    const statuses = [
       ProjectStatus.available,
       ProjectStatus.inProgress,
       ProjectStatus.review,
       ProjectStatus.pending,
+      ProjectStatus.onTrack,
+      ProjectStatus.delayed,
+      ProjectStatus.done,
+      ProjectStatus.completed,
+      ProjectStatus.cancelled,
     ];
 
     return DropdownButtonFormField<ProjectStatus>(
-      value: value,
+      value: statuses.contains(value) ? value : ProjectStatus.available,
       onChanged: onChanged,
-      style: GoogleFonts.inter(
-          fontSize: 15, color: colorScheme.onSurface),
+      style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: 'Status',
         labelStyle: GoogleFonts.inter(fontSize: 14),
@@ -300,19 +331,21 @@ class _DeadlinePicker extends StatelessWidget {
   final String placeholder;
   final DateTime? value;
   final VoidCallback onPick;
+  final VoidCallback? onClear;
 
   const _DeadlinePicker({
     required this.placeholder,
     required this.value,
     required this.onPick,
+    this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final months = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec'
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
 
     return GestureDetector(
@@ -329,19 +362,27 @@ class _DeadlinePicker extends StatelessWidget {
             Icon(Icons.calendar_today_outlined,
                 size: 20, color: colorScheme.primary),
             const SizedBox(width: 12),
-            Text(
-              value == null
-                  ? placeholder
-                  : '${months[value!.month - 1]} ${value!.day}, ${value!.year}',
-              style: GoogleFonts.inter(
-                  fontSize: 15,
-                  color: value == null
-                      ? colorScheme.onSurface.withAlpha(100)
-                      : colorScheme.onSurface),
+            Expanded(
+              child: Text(
+                value == null
+                    ? placeholder
+                    : '${months[value!.month - 1]} ${value!.day}, ${value!.year}',
+                style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: value == null
+                        ? colorScheme.onSurface.withAlpha(100)
+                        : colorScheme.onSurface),
+              ),
             ),
-            const Spacer(),
-            Icon(Icons.chevron_right,
-                color: colorScheme.onSurface.withAlpha(80)),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child:
+                    Icon(Icons.close, size: 18, color: colorScheme.onSurface.withAlpha(120)),
+              )
+            else
+              Icon(Icons.chevron_right,
+                  color: colorScheme.onSurface.withAlpha(80)),
           ],
         ),
       ),
