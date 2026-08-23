@@ -32,7 +32,7 @@ class ThemeService {
     appBarTheme: appBarTheme,
     brightness: Brightness.light,
     elevatedButtonTheme: elevatedButtonThemeData,
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
@@ -47,7 +47,7 @@ class ThemeService {
     ),
     brightness: Brightness.dark,
     elevatedButtonTheme: elevatedButtonThemeData,
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
