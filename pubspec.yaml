@@ -28,7 +28,7 @@ dependencies:
   awesome_notifications: ^0.9.3+1
 
   # UI / Animations
-  google_fonts: ^6.3.0
+  google_fonts: ^6.3.3 # 6.3.0 fails const-eval on current Dart SDK
   animate_do: ^4.2.0
   curved_labeled_navigation_bar: ^2.0.6
   fl_chart: ^0.70.2
