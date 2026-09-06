@@ -10,17 +10,32 @@ import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
 import 'package:synthinnotech/modules/auth/presentation/change_password_screen.dart';
 import 'package:synthinnotech/modules/profile/profile_screen.dart';
 import 'package:synthinnotech/model/user/app_user.dart';
+import 'package:synthinnotech/service/settings_service.dart';
 import 'package:synthinnotech/service/theme_service.dart';
 import 'package:synthinnotech/view/notifications_screen.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => SettingsService.loadPreferences(ref));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = ref.watch(ThemeService.isDarkTheme);
     final user = ref.watch(currentUserProvider);
+    final pushEnabled = ref.watch(SettingsService.pushNotificationsEnabled);
+    final projectAlerts = ref.watch(SettingsService.projectAlertsEnabled);
 
     return Scaffold(
       appBar: AppBar(
@@ -56,6 +71,36 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: Switch(
                     value: isDark,
                     onChanged: (_) => ThemeService.toggleTheme(ref),
+                    activeThumbColor: baseColor1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeInLeft(
+            delay: const Duration(milliseconds: 150),
+            child: _Section(
+              title: 'Notifications',
+              items: [
+                _SettingsTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: 'Push Notifications',
+                  subtitle: 'Chat, mentions and reminders',
+                  trailing: Switch(
+                    value: pushEnabled,
+                    onChanged: (v) =>
+                        SettingsService.setPushNotifications(ref, v),
+                    activeThumbColor: baseColor1,
+                  ),
+                ),
+                _SettingsTile(
+                  icon: Icons.campaign_outlined,
+                  title: 'Project Alerts',
+                  subtitle: 'Deadlines and status changes',
+                  trailing: Switch(
+                    value: projectAlerts,
+                    onChanged: (v) => SettingsService.setProjectAlerts(ref, v),
                     activeThumbColor: baseColor1,
                   ),
                 ),

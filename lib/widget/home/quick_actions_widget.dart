@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/modules/notes/notes_screen.dart';
 import 'package:synthinnotech/view/add_project_screen.dart';
 import 'package:synthinnotech/view/add_transaction_screen.dart';
 import 'package:synthinnotech/view/add_employee_screen.dart';
@@ -99,6 +100,21 @@ class QuickActionsWidget extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        FadeInUp(
+          delay: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 400),
+          child: _ActionButton(
+            label: 'My Notes',
+            icon: Icons.note_alt_outlined,
+            color: const Color(0xFFFF5722),
+            isDark: isDark,
+            onTap: () => Get.to(
+              () => const NotesScreen(),
+              transition: Transition.downToUp,
+            ),
+          ),
         ),
       ],
     );

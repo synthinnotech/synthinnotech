@@ -25,7 +25,7 @@ dependencies:
   firebase_storage: ^12.4.0
 
   # Notifications
-  awesome_notifications: ^0.9.3+1
+  awesome_notifications: ^0.12.1
 
   # UI / Animations
   google_fonts: ^6.3.3 # 6.3.0 fails const-eval on current Dart SDK
@@ -38,7 +38,7 @@ dependencies:
 
   # Utilities
   shared_preferences: ^2.5.3
-  intl: ^0.19.0
+  intl: ^0.20.0
   image_picker: ^1.1.2
   uuid: ^4.5.1
   http: ^1.6.0
