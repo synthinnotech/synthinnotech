@@ -32,11 +32,12 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
   NotificationsViewModel() : super(const NotificationsState(isLoading: true)) {
     if (Db.enabled) {
       _sub = NotificationCenter.watchMine().listen(
-        (list) => state = NotificationsState(isLoading: false, notifications: list),
+        (list) =>
+            state = NotificationsState(isLoading: false, notifications: list),
         onError: (_) => state = state.copyWith(isLoading: false),
       );
     } else {
-      state = NotificationsState(isLoading: false, notifications: _demo());
+      state = const NotificationsState(isLoading: false, notifications: []);
     }
   }
 
@@ -79,30 +80,6 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
     );
   }
 
-  List<AppNotification> _demo() => [
-        AppNotification(
-          id: 'n1',
-          title: 'Project Update',
-          body: 'Mobile App Redesign progress updated to 75%',
-          type: 'project',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-        ),
-        AppNotification(
-          id: 'n2',
-          title: 'Payment Received',
-          body: 'Client payment of ₹25,000 received from TechCorp',
-          type: 'finance',
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        ),
-        AppNotification(
-          id: 'n3',
-          title: 'New Employee',
-          body: 'Kavya Reddy has joined as Backend Intern',
-          type: 'employee',
-          isRead: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-      ];
 }
 
 final notificationsViewModelProvider =

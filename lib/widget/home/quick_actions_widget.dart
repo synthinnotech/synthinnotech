@@ -21,7 +21,7 @@ class QuickActionsWidget extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onBackground,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -133,10 +133,10 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: colorScheme.onSurface
-                  .withOpacity(isDark ? 0.08 : 0.06)),
+                  .withValues(alpha: isDark ? 0.08 : 0.06)),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.onSurface.withOpacity(0.04),
+              color: colorScheme.onSurface.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -147,7 +147,7 @@ class _ActionButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 20),

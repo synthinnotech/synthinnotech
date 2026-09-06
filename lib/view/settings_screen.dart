@@ -3,8 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/core/data/db.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/presentation/change_password_screen.dart';
+import 'package:synthinnotech/modules/profile/profile_screen.dart';
+import 'package:synthinnotech/model/user/app_user.dart';
 import 'package:synthinnotech/service/theme_service.dart';
+import 'package:synthinnotech/view/notifications_screen.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -13,7 +20,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = ref.watch(ThemeService.isDarkTheme);
-    final user = ref.watch(loginViewModelProvider).user;
+    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -28,7 +35,10 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           FadeInDown(
             duration: const Duration(milliseconds: 400),
-            child: _ProfileCard(user: user, isDark: isDark),
+            child: _ProfileCard(
+              user: user,
+              onTap: () => Get.to(() => const ProfileScreen()),
+            ),
           ),
           const SizedBox(height: 24),
           FadeInLeft(
@@ -41,11 +51,12 @@ class SettingsScreen extends ConsumerWidget {
                       ? Icons.dark_mode_outlined
                       : Icons.light_mode_outlined,
                   title: 'Dark Mode',
-                  subtitle: isDark ? 'Switch to light theme' : 'Switch to dark theme',
+                  subtitle:
+                      isDark ? 'Switch to light theme' : 'Switch to dark theme',
                   trailing: Switch(
                     value: isDark,
                     onChanged: (_) => ThemeService.toggleTheme(ref),
-                    activeColor: baseColor1,
+                    activeThumbColor: baseColor1,
                   ),
                 ),
               ],
@@ -55,27 +66,25 @@ class SettingsScreen extends ConsumerWidget {
           FadeInLeft(
             delay: const Duration(milliseconds: 200),
             child: _Section(
-              title: 'Notifications',
+              title: 'Account',
               items: [
                 _SettingsTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Push Notifications',
-                  subtitle: 'Manage notification preferences',
-                  trailing: Switch(
-                    value: true,
-                    onChanged: (_) {},
-                    activeColor: baseColor1,
-                  ),
+                  icon: Icons.person_outline,
+                  title: 'Edit Profile',
+                  subtitle: 'Name, contact details, department',
+                  onTap: () => Get.to(() => const ProfileScreen()),
                 ),
                 _SettingsTile(
-                  icon: Icons.campaign_outlined,
-                  title: 'Project Alerts',
-                  subtitle: 'Deadline and status updates',
-                  trailing: Switch(
-                    value: true,
-                    onChanged: (_) {},
-                    activeColor: baseColor1,
-                  ),
+                  icon: Icons.lock_outline,
+                  title: 'Change Password',
+                  subtitle: 'Update your sign-in password',
+                  onTap: () => Get.to(() => const ChangePasswordScreen()),
+                ),
+                _SettingsTile(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: 'View recent activity',
+                  onTap: () => Get.to(() => const NotificationsScreen()),
                 ),
               ],
             ),
@@ -84,25 +93,20 @@ class SettingsScreen extends ConsumerWidget {
           FadeInLeft(
             delay: const Duration(milliseconds: 300),
             child: _Section(
-              title: 'Account',
+              title: 'About',
               items: [
                 _SettingsTile(
-                  icon: Icons.security,
-                  title: 'Security',
-                  subtitle: 'Password and authentication',
-                  onTap: () {},
-                ),
-                _SettingsTile(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  subtitle: 'FAQs and contact support',
-                  onTap: () {},
-                ),
-                _SettingsTile(
                   icon: Icons.info_outline,
-                  title: 'About',
-                  subtitle: 'SynthInnoTech v1.0.0',
-                  onTap: () {},
+                  title: 'About SynthInnoTech',
+                  subtitle: 'Version 1.0.0',
+                  onTap: () => _showAbout(context),
+                ),
+                _SettingsTile(
+                  icon: Db.enabled ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                  title: 'Backend status',
+                  subtitle: Db.enabled
+                      ? 'Firebase connected'
+                      : 'Firebase not configured — see SETUP.md',
                 ),
               ],
             ),
@@ -116,77 +120,98 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showAbout(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'SynthInnoTech',
+      applicationVersion: '1.0.0',
+      applicationIcon: const CircleAvatar(
+        backgroundImage: AssetImage('assets/images/logo.png'),
+      ),
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Company management for projects, people, finance, attendance, '
+          'leave, announcements and team chat.',
+          style: GoogleFonts.inter(fontSize: 13, height: 1.5),
+        ),
+      ],
+    );
+  }
 }
 
 class _ProfileCard extends StatelessWidget {
-  final dynamic user;
-  final bool isDark;
-  const _ProfileCard({required this.user, required this.isDark});
+  final AppUser? user;
+  final VoidCallback onTap;
+  const _ProfileCard({required this.user, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [baseColor1, baseColor2],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: Colors.white.withAlpha(40),
-            child: Text(
-              user?.name?.isNotEmpty == true
-                  ? user!.name[0].toUpperCase()
-                  : 'S',
-              style: GoogleFonts.inter(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white),
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [baseColor1, baseColor2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.name ?? 'User',
-                  style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white),
-                ),
-                Text(
-                  user?.email ?? '',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, color: Colors.white70),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(40),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    (user?.role ?? 'employee').toUpperCase(),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: Colors.white.withValues(alpha: 0.16),
+              child: Text(
+                user?.initial ?? 'U',
+                style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.name ?? 'User',
                     style: GoogleFonts.inter(
-                        fontSize: 10,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Colors.white),
                   ),
-                ),
-              ],
+                  Text(
+                    user?.email ?? '',
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      (user?.appRole.label ?? 'Employee').toUpperCase(),
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white70),
+          ],
+        ),
       ),
     );
   }
@@ -210,7 +235,7 @@ class _Section extends StatelessWidget {
             style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface.withAlpha(160),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 letterSpacing: 0.5),
           ),
         ),
@@ -220,7 +245,7 @@ class _Section extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                  color: colorScheme.onSurface.withAlpha(8),
+                  color: colorScheme.onSurface.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2)),
             ],
@@ -253,20 +278,25 @@ class _SettingsTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: colorScheme.primary.withAlpha(20),
+          color: colorScheme.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 20, color: colorScheme.primary),
       ),
       title: Text(title,
           style: GoogleFonts.inter(
-              fontSize: 15, fontWeight: FontWeight.w500,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
               color: colorScheme.onSurface)),
       subtitle: Text(subtitle,
           style: GoogleFonts.inter(
-              fontSize: 12, color: colorScheme.onSurface.withAlpha(140))),
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.55))),
       trailing: trailing ??
-          Icon(Icons.chevron_right, color: colorScheme.onSurface.withAlpha(100)),
+          (onTap != null
+              ? Icon(Icons.chevron_right,
+                  color: colorScheme.onSurface.withValues(alpha: 0.4))
+              : null),
       onTap: onTap,
     );
   }
@@ -287,9 +317,7 @@ class _LogoutButton extends StatelessWidget {
         label: Text(
           'Sign Out',
           style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.red),
+              fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red),
         ),
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Colors.red, width: 1.5),
@@ -311,18 +339,16 @@ class _LogoutButton extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: Colors.grey)),
+            child:
+                Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(loginViewModelProvider.notifier).logout();
-              // AuthGate reacts to the auth stream; just unwind to the root.
               Get.until((route) => route.isFirst);
             },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Sign Out',
                 style: GoogleFonts.inter(color: Colors.white)),
           ),

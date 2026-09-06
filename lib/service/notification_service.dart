@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:synthinnotech/config/app_colors.dart';
+import 'package:synthinnotech/view/notifications_screen.dart';
 
 class NotificationService {
   static Future<void> initialize() async {
@@ -109,8 +110,8 @@ class NotificationService {
 
   @pragma('vm:entry-point')
   static Future<void> onActionReceived(ReceivedAction action) async {
-    if (action.buttonKeyPressed == 'VIEW') {
-      Get.toNamed('/notifications');
+    if (action.buttonKeyPressed != 'DISMISS') {
+      Get.to(() => const NotificationsScreen());
     }
   }
 

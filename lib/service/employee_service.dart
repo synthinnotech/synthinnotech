@@ -1,20 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
 import 'package:synthinnotech/core/data/db.dart';
-import 'package:synthinnotech/core/demo/demo_data.dart';
 import 'package:synthinnotech/model/employee/employee_model.dart';
 import 'package:uuid/uuid.dart';
 
 /// Reads/writes the staff directory (`users` collection).
 ///
-/// Behaviour change from the original: failures are no longer swallowed. When
-/// Firebase is configured, a Firestore error propagates as an [AppException]
-/// so the UI can show it. Demo data is returned *only* when Firebase itself
-/// is not initialised.
+/// Failures are never swallowed: a Firestore error propagates as an
+/// [AppException] so the UI can show it. When Firebase is not initialised the
+/// list is simply empty — there is no mock/demo data.
 class EmployeeService {
   static const _uuid = Uuid();
 
   static Future<List<EmployeeModel>> getEmployees() async {
-    if (!Db.enabled) return DemoData.employees();
+    if (!Db.enabled) return const [];
     return Db.guard(() async {
       final snap = await Db.users.orderBy('name').get();
       return snap.docs
@@ -25,7 +23,7 @@ class EmployeeService {
 
   /// Live directory updates.
   static Stream<List<EmployeeModel>> watchEmployees() {
-    if (!Db.enabled) return Stream.value(DemoData.employees());
+    if (!Db.enabled) return Stream.value(const []);
     return Db.guardStream(
       Db.users.orderBy('name').snapshots().map(
             (s) => s.docs
@@ -37,9 +35,7 @@ class EmployeeService {
 
   static Future<EmployeeModel> addEmployee(EmployeeModel emp) async {
     final id = emp.id.isEmpty ? _uuid.v4() : emp.id;
-    if (!Db.enabled) {
-      return EmployeeModel.fromJson(emp.toJson(), id);
-    }
+    if (!Db.enabled) return EmployeeModel.fromJson(emp.toJson(), id);
     return Db.guard(() async {
       await Db.users.doc(id).set(
             {...emp.toJson(), 'created_at': Db.now},

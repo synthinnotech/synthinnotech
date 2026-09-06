@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
 import 'package:synthinnotech/core/data/db.dart';
-import 'package:synthinnotech/core/demo/demo_data.dart';
 import 'package:synthinnotech/model/home/expense.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,7 +7,7 @@ class FinanceService {
   static const _uuid = Uuid();
 
   static Future<List<Expense>> getTransactions() async {
-    if (!Db.enabled) return DemoData.transactions();
+    if (!Db.enabled) return const [];
     return Db.guard(() async {
       final snap = await Db.transactions.get();
       final list =
@@ -19,7 +18,7 @@ class FinanceService {
   }
 
   static Stream<List<Expense>> watchTransactions() {
-    if (!Db.enabled) return Stream.value(DemoData.transactions());
+    if (!Db.enabled) return Stream.value(const []);
     return Db.guardStream(
       Db.transactions.snapshots().map((s) {
         final list =

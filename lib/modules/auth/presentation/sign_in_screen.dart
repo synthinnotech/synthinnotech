@@ -244,15 +244,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.withAlpha(30),
+                                  color: Colors.red.withAlpha(25),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  'Demo mode — Firebase isn\'t configured. '
-                                  'Any email + a 6+ char password works. '
-                                  'Use an email containing "admin" for admin access.',
+                                  'Firebase isn\'t configured on this build, so '
+                                  'sign-in is unavailable. See SETUP.md.',
                                   style: GoogleFonts.inter(
-                                      fontSize: 11, color: Colors.brown[700]),
+                                      fontSize: 11, color: Colors.red[800]),
                                 ),
                               ),
                             ],

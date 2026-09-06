@@ -250,7 +250,7 @@ class _StatusDropdown extends StatelessWidget {
     ];
 
     return DropdownButtonFormField<ProjectStatus>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       style: GoogleFonts.inter(
           fontSize: 15, color: colorScheme.onSurface),

@@ -9,27 +9,20 @@ import 'package:synthinnotech/firebase_options.dart';
 import 'package:synthinnotech/model/user/app_user.dart';
 import 'package:synthinnotech/service/chat_service.dart';
 
+const _notConfigured = AppException(
+  'Firebase is not configured yet. See SETUP.md to finish setup.',
+  code: 'unavailable',
+);
+
 /// The one place that talks to Firebase Auth.
 ///
-/// It exposes a single [changes] stream that already carries the merged
-/// Auth user + Firestore profile, so the rest of the app never has to poke at
-/// `FirebaseAuth` or reconcile the two by hand.
+/// Exposes a single [changes] stream carrying the merged Auth user + Firestore
+/// profile, so the rest of the app never pokes at `FirebaseAuth` directly or
+/// reconciles the two by hand. There is no offline/mock mode — if Firebase is
+/// unavailable the app stays signed out and every action reports it.
 class AuthRepository {
-  AuthRepository() {
-    if (!Db.enabled) {
-      // Prime the demo stream with "signed out".
-      _demoController.add(null);
-    }
-  }
-
-  final _demoController = StreamController<AppUser?>.broadcast();
-  AppUser? _demoUser;
-
-  // ── Stream of the current user (or null) ────────────────────────────────
   Stream<AppUser?> changes() {
-    if (!Db.enabled) {
-      return _demoStream();
-    }
+    if (!Db.enabled) return Stream<AppUser?>.value(null);
     return FirebaseAuth.instance.authStateChanges().asyncExpand((fbUser) {
       if (fbUser == null) return Stream<AppUser?>.value(null);
       return Db.users.doc(fbUser.uid).snapshots().map((doc) {
@@ -54,18 +47,9 @@ class AuthRepository {
     });
   }
 
-  Stream<AppUser?> _demoStream() async* {
-    yield _demoUser;
-    yield* _demoController.stream;
-  }
-
-  AppUser? get currentSnapshot => _demoUser;
-
-  // ── Sign in ────────────────────────────────────────────────────────────
   Future<AppUser> signIn({required String email, required String password}) {
+    if (!Db.enabled) return Future.error(_notConfigured);
     return Db.guard(() async {
-      if (!Db.enabled) return _demoSignIn(email, password);
-
       await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email.trim(), password: password);
       final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -77,62 +61,34 @@ class AuthRepository {
       }
       final user = AppUser(
         uid: uid,
-        name: (email.split('@').first),
+        name: email.split('@').first,
         email: email.trim(),
         role: 'employee',
       );
-      await Db.users
-          .doc(uid)
-          .set({...user.toJson(), 'created_at': Db.now}, SetOptions(merge: true));
+      await Db.users.doc(uid).set(
+        {...user.toJson(), 'created_at': Db.now},
+        SetOptions(merge: true),
+      );
       return user;
     });
   }
 
-  AppUser _demoSignIn(String email, String password) {
-    if (email.trim().isEmpty || password.length < 6) {
-      throw const AppException('Enter an email and a password of 6+ characters.',
-          code: 'invalid-credential');
-    }
-    _demoUser = AppUser(
-      uid: 'demo-uid',
-      name: email.contains('admin') ? 'Demo Admin' : 'Demo User',
-      email: email.trim(),
-      phone: '+91 90000 00000',
-      role: email.contains('admin') ? 'admin' : 'employee',
-      department: 'Technology',
-      jobTitle: email.contains('admin') ? 'Administrator' : 'Team Member',
-      isActive: true,
-    );
-    _demoController.add(_demoUser);
-    return _demoUser!;
+  Future<void> signOut() {
+    if (!Db.enabled) return Future.value();
+    return Db.guard(() => FirebaseAuth.instance.signOut());
   }
 
-  // ── Sign out ───────────────────────────────────────────────────────────
-  Future<void> signOut() async {
-    if (!Db.enabled) {
-      _demoUser = null;
-      _demoController.add(null);
-      return;
-    }
-    await Db.guard(() => FirebaseAuth.instance.signOut());
-  }
-
-  // ── Password reset ─────────────────────────────────────────────────────
   Future<void> sendPasswordReset(String email) {
-    if (!Db.enabled) {
-      return Future.error(const AppException(
-          'Password reset needs Firebase to be configured.',
-          code: 'unavailable'));
-    }
+    if (!Db.enabled) return Future.error(_notConfigured);
     return Db.guard(() =>
         FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim()));
   }
 
-  // ── Change password (requires re-auth) ─────────────────────────────────
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
   }) {
+    if (!Db.enabled) return Future.error(_notConfigured);
     return Db.guard(() async {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null || user.email == null) {
@@ -146,21 +102,9 @@ class AuthRepository {
     });
   }
 
-  // ── Update my own profile ──────────────────────────────────────────────
   Future<void> updateMyProfile(Map<String, dynamic> fields) {
+    if (!Db.enabled) return Future.error(_notConfigured);
     return Db.guard(() async {
-      if (!Db.enabled) {
-        _demoUser = _demoUser?.copyWith(
-          name: fields['name'] as String?,
-          phone: fields['phone'] as String?,
-          department: fields['department'] as String?,
-          jobTitle: fields['job_title'] as String?,
-          address: fields['address'] as String?,
-          gender: fields['gender'] as String?,
-        );
-        _demoController.add(_demoUser);
-        return;
-      }
       final uid = Db.uid;
       if (uid == null) {
         throw const AppException('You need to be signed in.',
@@ -172,22 +116,17 @@ class AuthRepository {
     });
   }
 
-  // ── Admin: create a staff account without being signed out ─────────────
-  //
-  // Uses a throw-away secondary Firebase app so the *admin's* session is
-  // untouched. The admin then writes the staff profile doc (allowed by the
-  // security rules for admins). No Cloud Function required.
+  /// Admin: create a staff sign-in account without disturbing the admin's own
+  /// session. Uses a throw-away secondary Firebase app, then the admin writes
+  /// the staff profile doc (permitted for admins by the security rules). No
+  /// Cloud Function required — works on the free plan.
   Future<AppUser> createStaffAccount({
     required String email,
     required String tempPassword,
     required Map<String, dynamic> profile,
   }) {
+    if (!Db.enabled) return Future.error(_notConfigured);
     return Db.guard(() async {
-      if (!Db.enabled) {
-        throw const AppException(
-            'Creating staff accounts needs Firebase to be configured.',
-            code: 'unavailable');
-      }
       FirebaseApp? secondary;
       try {
         secondary = await Firebase.initializeApp(

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
 import 'package:synthinnotech/core/data/db.dart';
-import 'package:synthinnotech/core/demo/demo_data.dart';
 import 'package:synthinnotech/model/home/project.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,7 +7,7 @@ class ProjectService {
   static const _uuid = Uuid();
 
   static Future<List<Project>> getProjects() async {
-    if (!Db.enabled) return DemoData.projects();
+    if (!Db.enabled) return const [];
     return Db.guard(() async {
       // Fetch unordered and sort client-side so a missing / mixed-type
       // `created_at` can never make the whole list disappear.
@@ -22,7 +21,7 @@ class ProjectService {
   }
 
   static Stream<List<Project>> watchProjects() {
-    if (!Db.enabled) return Stream.value(DemoData.projects());
+    if (!Db.enabled) return Stream.value(const []);
     return Db.guardStream(
       Db.projects.snapshots().map((s) {
         final list =

@@ -60,6 +60,27 @@ class NotificationCenter {
     } catch (_) {/* best effort */}
   }
 
+  /// Send a notification to one specific user (e.g. the person whose leave was
+  /// just reviewed, or someone a task was assigned to).
+  static Future<void> pushTo({
+    required String uid,
+    required String title,
+    required String body,
+    String type = 'general',
+  }) async {
+    if (!Db.enabled || uid.isEmpty) return;
+    try {
+      await Db.notifications.doc(_uuid.v4()).set({
+        'user_id': uid,
+        'title': title,
+        'body': body,
+        'type': type,
+        'is_read': false,
+        'created_at': Db.now,
+      });
+    } catch (_) {/* best effort */}
+  }
+
   /// Fan a notification out to every active user (used for admin-level events
   /// like announcements). Kept client-side and simple for small teams; a
   /// Cloud Function handles the heavier cases.

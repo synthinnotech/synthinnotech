@@ -45,7 +45,7 @@ class DashboardStatsWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: errorColor.withOpacity(0.2)),
+        border: Border.all(color: errorColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -147,7 +147,7 @@ class DashboardStatsWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: baseColor1.withOpacity(0.35),
+            color: baseColor1.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -164,7 +164,7 @@ class DashboardStatsWidget extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   letterSpacing: 1.2,
                 ),
               ),
@@ -173,8 +173,8 @@ class DashboardStatsWidget extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: isProfit
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.red.withOpacity(0.3),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.red.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -214,7 +214,7 @@ class DashboardStatsWidget extends StatelessWidget {
               Container(
                 width: 1,
                 height: 50,
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
               ),
               Expanded(
                 child: _buildFinanceStat(
@@ -233,7 +233,7 @@ class DashboardStatsWidget extends StatelessWidget {
               value: stats.totalIncome > 0
                   ? (stats.totalExpense / stats.totalIncome).clamp(0.0, 1.0)
                   : 0,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               valueColor:
                   const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 5,
@@ -244,7 +244,7 @@ class DashboardStatsWidget extends StatelessWidget {
             '${((stats.totalExpense / (stats.totalIncome == 0 ? 1 : stats.totalIncome)) * 100).toStringAsFixed(0)}% of income spent',
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -267,7 +267,7 @@ class DashboardStatsWidget extends StatelessWidget {
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -302,10 +302,10 @@ class DashboardStatsWidget extends StatelessWidget {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: colorScheme.onSurface.withOpacity(isDark ? 0.1 : 0.06)),
+            color: colorScheme.onSurface.withValues(alpha: isDark ? 0.1 : 0.06)),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.onSurface.withOpacity(0.05),
+            color: colorScheme.onSurface.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -320,7 +320,7 @@ class DashboardStatsWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -348,7 +348,7 @@ class DashboardStatsWidget extends StatelessWidget {
             subtitle,
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: colorScheme.onSurface.withOpacity(0.5),
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
