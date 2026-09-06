@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 import 'package:synthinnotech/model/home/project.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
 import 'package:synthinnotech/view/add_project_screen.dart';
 import 'package:synthinnotech/view/project_detail_screen.dart';
 import 'package:synthinnotech/view_model/project_view_model.dart';
@@ -38,6 +40,8 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(projectsViewModelProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final canManage =
+        ref.watch(currentUserProvider)?.can(Permission.manageProjects) ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -59,11 +63,12 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
         ),
         actions: [
-          IconButton(
-            onPressed: () =>
-                Get.to(() => const AddProjectScreen(), transition: Transition.downToUp),
-            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-          ),
+          if (canManage)
+            IconButton(
+              onPressed: () => Get.to(() => const AddProjectScreen(),
+                  transition: Transition.downToUp),
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+            ),
         ],
       ),
       body: state.isLoading
@@ -80,17 +85,20 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                 _ProjectList(projects: state.done),
               ],
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 65),
-        child: FloatingActionButton.extended(
-          onPressed: () =>
-              Get.to(() => const AddProjectScreen(), transition: Transition.downToUp),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: Text('New Project', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        ),
-      ),
+      floatingActionButton: canManage
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 65),
+              child: FloatingActionButton.extended(
+                onPressed: () => Get.to(() => const AddProjectScreen(),
+                    transition: Transition.downToUp),
+                backgroundColor: colorScheme.primary,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.add),
+                label: Text('New Project',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
+            )
+          : null,
     );
   }
 }

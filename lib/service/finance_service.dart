@@ -1,137 +1,60 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
+import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/model/home/expense.dart';
 import 'package:uuid/uuid.dart';
 
 class FinanceService {
-  static bool get _ready => Firebase.apps.isNotEmpty;
-  static const _col = 'transactions';
+  static const _uuid = Uuid();
 
   static Future<List<Expense>> getTransactions() async {
-    if (_ready) {
-      try {
-        final snap = await FirebaseFirestore.instance
-            .collection(_col)
-            .orderBy('date', descending: true)
-            .get();
-        return snap.docs
-            .map((d) => Expense.fromJson(d.data(), d.id))
-            .toList();
-      } catch (_) {}
-    }
-    return _mockTransactions();
+    if (!Db.enabled) return const [];
+    return Db.guard(() async {
+      final snap = await Db.transactions.get();
+      final list =
+          snap.docs.map((d) => Expense.fromJson(d.data(), d.id)).toList();
+      list.sort((a, b) => b.date.compareTo(a.date));
+      return list;
+    });
+  }
+
+  static Stream<List<Expense>> watchTransactions() {
+    if (!Db.enabled) return Stream.value(const []);
+    return Db.guardStream(
+      Db.transactions.snapshots().map((s) {
+        final list =
+            s.docs.map((d) => Expense.fromJson(d.data(), d.id)).toList();
+        list.sort((a, b) => b.date.compareTo(a.date));
+        return list;
+      }),
+    );
   }
 
   static Future<Expense> addTransaction(Expense tx) async {
-    final id = tx.id.isEmpty ? const Uuid().v4() : tx.id;
-    final data = {...tx.toJson(), 'created_at': DateTime.now().toIso8601String()};
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).set(data);
-      } catch (_) {}
-    }
-    return Expense.fromJson(data, id);
+    final id = tx.id.isEmpty ? _uuid.v4() : tx.id;
+    if (!Db.enabled) return Expense.fromJson(tx.toJson(), id);
+    return Db.guard(() async {
+      await Db.transactions.doc(id).set({
+        ...tx.toJson(),
+        'created_at': Db.now,
+        'created_by': Db.uid,
+      });
+      final saved = await Db.transactions.doc(id).get();
+      return Expense.fromJson(saved.data() ?? tx.toJson(), id);
+    });
   }
 
   static Future<void> updateTransaction(Expense tx) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance
-            .collection(_col)
-            .doc(tx.id)
-            .update(tx.toJson());
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() async {
+      await Db.transactions.doc(tx.id).set(
+            {...tx.toJson(), 'updated_at': Db.now},
+            SetOptions(merge: true),
+          );
+    });
   }
 
   static Future<void> deleteTransaction(String id) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).delete();
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() => Db.transactions.doc(id).delete());
   }
-
-  static List<Expense> _mockTransactions() => [
-        Expense(
-          id: 't1',
-          title: 'Client Payment - TechCorp',
-          amount: 25000,
-          category: 'Project Revenue',
-          date: DateTime.now().subtract(const Duration(days: 1)),
-          type: TransactionType.income,
-        ),
-        Expense(
-          id: 't2',
-          title: 'Office Rent',
-          amount: 8500,
-          category: 'Rent',
-          date: DateTime.now().subtract(const Duration(days: 3)),
-          type: TransactionType.expense,
-        ),
-        Expense(
-          id: 't3',
-          title: 'Project Payment - RetailMax',
-          amount: 18000,
-          category: 'Project Revenue',
-          date: DateTime.now().subtract(const Duration(days: 5)),
-          type: TransactionType.income,
-        ),
-        Expense(
-          id: 't4',
-          title: 'Software Subscriptions',
-          amount: 1200,
-          category: 'Software',
-          date: DateTime.now().subtract(const Duration(days: 7)),
-          type: TransactionType.expense,
-        ),
-        Expense(
-          id: 't5',
-          title: 'Team Salaries',
-          amount: 45000,
-          category: 'Payroll',
-          date: DateTime.now().subtract(const Duration(days: 8)),
-          type: TransactionType.expense,
-        ),
-        Expense(
-          id: 't6',
-          title: 'Consulting Fee',
-          amount: 5500,
-          category: 'Consulting',
-          date: DateTime.now().subtract(const Duration(days: 10)),
-          type: TransactionType.income,
-        ),
-        Expense(
-          id: 't7',
-          title: 'Office Supplies',
-          amount: 650,
-          category: 'Office',
-          date: DateTime.now().subtract(const Duration(days: 12)),
-          type: TransactionType.expense,
-        ),
-        Expense(
-          id: 't8',
-          title: 'New Project Advance',
-          amount: 12000,
-          category: 'Project Revenue',
-          date: DateTime.now().subtract(const Duration(days: 14)),
-          type: TransactionType.income,
-        ),
-        Expense(
-          id: 't9',
-          title: 'Marketing & Ads',
-          amount: 3500,
-          category: 'Marketing',
-          date: DateTime.now().subtract(const Duration(days: 16)),
-          type: TransactionType.expense,
-        ),
-        Expense(
-          id: 't10',
-          title: 'Client Payment - StartupXYZ',
-          amount: 9000,
-          category: 'Project Revenue',
-          date: DateTime.now().subtract(const Duration(days: 18)),
-          type: TransactionType.income,
-        ),
-      ];
 }

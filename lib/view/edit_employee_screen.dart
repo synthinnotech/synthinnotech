@@ -326,7 +326,7 @@ class _RoleDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DropdownButtonFormField<EmployeeRole>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),
       decoration: InputDecoration(
@@ -411,7 +411,7 @@ class _ActiveToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: colorScheme.primary,
+            activeThumbColor: colorScheme.primary,
           ),
         ],
       ),
@@ -431,7 +431,7 @@ class _GenderDropdown extends StatelessWidget {
     const options = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
     return DropdownButtonFormField<String>(
-      value: options.contains(value) ? value : null,
+      initialValue: options.contains(value) ? value : null,
       hint: Text('Select Gender', style: GoogleFonts.inter(fontSize: 14)),
       onChanged: onChanged,
       style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),

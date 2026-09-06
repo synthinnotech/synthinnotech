@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:synthinnotech/modules/auth/presentation/auth_gate.dart';
 import 'package:synthinnotech/service/firebase_service.dart';
 import 'package:synthinnotech/service/notification_service.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/splash_screen.dart';
 
 const Color baseColor1 = Color.fromARGB(255, 0, 146, 183);
 const Color baseColor2 = Color.fromARGB(255, 71, 208, 242);
@@ -14,7 +14,9 @@ const Color baseColor3 = Color.fromARGB(255, 1, 79, 101);
 
 @pragma('vm:entry-point')
 Future<void> _backgroundMessageHandler(RemoteMessage message) async {
+  // Runs in a separate isolate — nothing from main() is initialised here.
   await FirebaseService.initialize();
+  await NotificationService.initialize();
   await NotificationService.showFromFCM(message);
 }
 
@@ -63,7 +65,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: ThemeService.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      home: const AuthGate(),
     );
   }
 }

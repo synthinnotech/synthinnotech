@@ -11,9 +11,9 @@ import 'package:synthinnotech/service/notification_service.dart';
 import 'package:synthinnotech/view/chat_conversation_screen.dart';
 import 'package:synthinnotech/view/expenses_screen.dart';
 import 'package:synthinnotech/view/home_page.dart';
+import 'package:synthinnotech/view/more_screen.dart';
 import 'package:synthinnotech/view/people_screen.dart';
 import 'package:synthinnotech/view/projects_screen.dart';
-import 'package:synthinnotech/view/settings_screen.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
@@ -97,7 +97,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           ProjectsScreen(),
           HomePage(),
           PeopleScreen(),
-          SettingsScreen(),
+          MoreScreen(),
         ],
       ),
       bottomNavigationBar: _buildNav(),
@@ -140,7 +140,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       (Icons.folder_outlined, 'Projects', 1),
       (Icons.home_rounded, 'Home', 2),
       (Icons.people_outline, 'People', 3),
-      (Icons.settings_outlined, 'Settings', 4),
+      (Icons.grid_view_rounded, 'More', 4),
     ];
 
     return items.map((item) {

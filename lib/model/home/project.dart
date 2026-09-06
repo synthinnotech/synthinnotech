@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:synthinnotech/core/data/db.dart';
 
 enum ProjectStatus {
   available,
@@ -100,17 +101,11 @@ class Project {
         progress: (json['progress'] as num?)?.toDouble() ?? 0,
         budget: (json['budget'] as num?)?.toDouble() ?? 0,
         spent: (json['spent'] as num?)?.toDouble() ?? 0,
-        startDate: json['start_date'] != null
-            ? DateTime.tryParse(json['start_date'].toString())
-            : null,
-        deadline: json['deadline'] != null
-            ? DateTime.tryParse(json['deadline'].toString())
-            : null,
+        startDate: Db.readDate(json['start_date']),
+        deadline: Db.readDate(json['deadline']),
         teamMemberIds: List<String>.from(json['team_member_ids'] ?? []),
         createdBy: json['created_by'],
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'].toString())
-            : null,
+        createdAt: Db.readDate(json['created_at']),
       );
 
   Map<String, dynamic> toJson() => {

@@ -282,7 +282,7 @@ class _StatusDropdown extends StatelessWidget {
     ];
 
     return DropdownButtonFormField<ProjectStatus>(
-      value: statuses.contains(value) ? value : ProjectStatus.available,
+      initialValue: statuses.contains(value) ? value : ProjectStatus.available,
       onChanged: onChanged,
       style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),
       decoration: InputDecoration(

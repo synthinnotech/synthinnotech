@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 import 'package:synthinnotech/model/home/expense.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
 import 'package:synthinnotech/view/add_transaction_screen.dart';
 import 'package:synthinnotech/view_model/finance_view_model.dart';
 import 'package:synthinnotech/widget/common/app_empty_state.dart';
@@ -19,6 +21,8 @@ class ExpensesScreen extends ConsumerWidget {
     final state = ref.watch(financeViewModelProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final fmt = NumberFormat('#,##0', 'en_IN');
+    final canManage =
+        ref.watch(currentUserProvider)?.can(Permission.manageFinance) ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -28,28 +32,32 @@ class ExpensesScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w700,
                 color: Colors.white)),
         actions: [
-          IconButton(
-            onPressed: () => Get.to(
-              () => const AddTransactionScreen(),
-              transition: Transition.downToUp,
+          if (canManage)
+            IconButton(
+              onPressed: () => Get.to(
+                () => const AddTransactionScreen(),
+                transition: Transition.downToUp,
+              ),
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
             ),
-            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-          ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 65),
-        child: FloatingActionButton.extended(
-          onPressed: () => Get.to(
-            () => const AddTransactionScreen(),
-            transition: Transition.downToUp,
-          ),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: Text('Add', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        ),
-      ),
+      floatingActionButton: canManage
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 65),
+              child: FloatingActionButton.extended(
+                onPressed: () => Get.to(
+                  () => const AddTransactionScreen(),
+                  transition: Transition.downToUp,
+                ),
+                backgroundColor: colorScheme.primary,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.add),
+                label: Text('Add',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
+            )
+          : null,
       body: state.isLoading
           ? const Padding(
               padding: EdgeInsets.all(16),
@@ -381,10 +389,14 @@ class _TransactionCard extends ConsumerWidget {
     final color =
         isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
     final fmt = NumberFormat('#,##0.00', 'en_IN');
+    final canManage =
+        ref.watch(currentUserProvider)?.can(Permission.manageFinance) ?? false;
 
     return Dismissible(
       key: Key(tx.id),
-      direction: DismissDirection.endToStart,
+      direction: canManage
+          ? DismissDirection.endToStart
+          : DismissDirection.none,
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:synthinnotech/core/data/db.dart';
 
 enum EmployeeRole { admin, manager, employee, intern }
 
@@ -79,15 +80,9 @@ class EmployeeModel {
         isActive: json['is_active'] ?? true,
         address: json['address'],
         gender: json['gender'],
-        dateOfBirth: json['date_of_birth'] != null
-            ? DateTime.tryParse(json['date_of_birth'].toString())
-            : null,
-        joinDate: json['join_date'] != null
-            ? DateTime.tryParse(json['join_date'].toString())
-            : null,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'].toString())
-            : null,
+        dateOfBirth: Db.readDate(json['date_of_birth']),
+        joinDate: Db.readDate(json['join_date']),
+        createdAt: Db.readDate(json['created_at']),
       );
 
   Map<String, dynamic> toJson() => {

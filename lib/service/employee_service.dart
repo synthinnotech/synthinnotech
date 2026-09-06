@@ -1,93 +1,63 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
+import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/model/employee/employee_model.dart';
 import 'package:uuid/uuid.dart';
 
+/// Reads/writes the staff directory (`users` collection).
+///
+/// Failures are never swallowed: a Firestore error propagates as an
+/// [AppException] so the UI can show it. When Firebase is not initialised the
+/// list is simply empty — there is no mock/demo data.
 class EmployeeService {
-  static bool get _ready => Firebase.apps.isNotEmpty;
-  static const _col = 'users';
+  static const _uuid = Uuid();
 
   static Future<List<EmployeeModel>> getEmployees() async {
-    if (_ready) {
-      try {
-        final snap = await FirebaseFirestore.instance.collection(_col).get();
-        return snap.docs
-            .map((d) => EmployeeModel.fromJson(d.data(), d.id))
-            .toList();
-      } catch (_) {}
-    }
-    return _mockEmployees();
+    if (!Db.enabled) return const [];
+    return Db.guard(() async {
+      final snap = await Db.users.orderBy('name').get();
+      return snap.docs
+          .map((d) => EmployeeModel.fromJson(d.data(), d.id))
+          .toList();
+    });
+  }
+
+  /// Live directory updates.
+  static Stream<List<EmployeeModel>> watchEmployees() {
+    if (!Db.enabled) return Stream.value(const []);
+    return Db.guardStream(
+      Db.users.orderBy('name').snapshots().map(
+            (s) => s.docs
+                .map((d) => EmployeeModel.fromJson(d.data(), d.id))
+                .toList(),
+          ),
+    );
   }
 
   static Future<EmployeeModel> addEmployee(EmployeeModel emp) async {
-    final id = emp.id.isEmpty ? const Uuid().v4() : emp.id;
-    final data = {
-      ...emp.toJson(),
-      'created_at': DateTime.now().toIso8601String()
-    };
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).set(data);
-      } catch (_) {}
-    }
-    return EmployeeModel.fromJson(data, id);
+    final id = emp.id.isEmpty ? _uuid.v4() : emp.id;
+    if (!Db.enabled) return EmployeeModel.fromJson(emp.toJson(), id);
+    return Db.guard(() async {
+      await Db.users.doc(id).set(
+            {...emp.toJson(), 'created_at': Db.now},
+            SetOptions(merge: true),
+          );
+      final saved = await Db.users.doc(id).get();
+      return EmployeeModel.fromJson(saved.data() ?? emp.toJson(), id);
+    });
   }
 
   static Future<void> updateEmployee(EmployeeModel emp) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance
-            .collection(_col)
-            .doc(emp.id)
-            .update(emp.toJson());
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() async {
+      await Db.users.doc(emp.id).set(
+            {...emp.toJson(), 'updated_at': Db.now},
+            SetOptions(merge: true),
+          );
+    });
   }
 
   static Future<void> deleteEmployee(String id) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).delete();
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() => Db.users.doc(id).delete());
   }
-
-  static List<EmployeeModel> _mockEmployees() => [
-        EmployeeModel(
-          id: 'e1',
-          name: 'Vinoth A',
-          email: 'vinoth@synthinnotech.com',
-          phone: '+91 98765 43210',
-          role: EmployeeRole.admin,
-          department: 'Management',
-          jobTitle: 'CEO & Founder',
-          salary: 150000,
-          isActive: true,
-          joinDate: DateTime(2022, 1, 1),
-        ),
-        EmployeeModel(
-          id: 'e2',
-          name: 'Priya Sharma',
-          email: 'priya@synthinnotech.com',
-          phone: '+91 98765 43211',
-          role: EmployeeRole.manager,
-          department: 'Technology',
-          jobTitle: 'Tech Lead',
-          salary: 95000,
-          isActive: true,
-          joinDate: DateTime(2022, 3, 15),
-        ),
-        EmployeeModel(
-          id: 'e3',
-          name: 'Arjun Kumar',
-          email: 'arjun@synthinnotech.com',
-          phone: '+91 98765 43212',
-          role: EmployeeRole.employee,
-          department: 'Technology',
-          jobTitle: 'Flutter Developer',
-          salary: 70000,
-          isActive: true,
-          joinDate: DateTime(2022, 6, 1),
-        ),
-      ];
 }

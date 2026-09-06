@@ -1,13 +1,18 @@
 import 'package:animate_do/animate_do.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/core/data/db.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/presentation/change_password_screen.dart';
+import 'package:synthinnotech/modules/profile/profile_screen.dart';
+import 'package:synthinnotech/model/user/app_user.dart';
 import 'package:synthinnotech/service/settings_service.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/login_page.dart';
+import 'package:synthinnotech/view/notifications_screen.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -28,9 +33,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = ref.watch(ThemeService.isDarkTheme);
-    final user = ref.watch(loginViewModelProvider).user;
+    final user = ref.watch(currentUserProvider);
     final pushEnabled = ref.watch(SettingsService.pushNotificationsEnabled);
-    final projectAlertsEnabled = ref.watch(SettingsService.projectAlertsEnabled);
+    final projectAlerts = ref.watch(SettingsService.projectAlertsEnabled);
 
     return Scaffold(
       appBar: AppBar(
@@ -45,7 +50,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           FadeInDown(
             duration: const Duration(milliseconds: 400),
-            child: _ProfileCard(user: user, isDark: isDark),
+            child: _ProfileCard(
+              user: user,
+              onTap: () => Get.to(() => const ProfileScreen()),
+            ),
           ),
           const SizedBox(height: 24),
           FadeInLeft(
@@ -58,11 +66,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? Icons.dark_mode_outlined
                       : Icons.light_mode_outlined,
                   title: 'Dark Mode',
-                  subtitle: isDark ? 'Switch to light theme' : 'Switch to dark theme',
+                  subtitle:
+                      isDark ? 'Switch to light theme' : 'Switch to dark theme',
                   trailing: Switch(
                     value: isDark,
                     onChanged: (_) => ThemeService.toggleTheme(ref),
-                    activeColor: baseColor1,
+                    activeThumbColor: baseColor1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeInLeft(
+            delay: const Duration(milliseconds: 150),
+            child: _Section(
+              title: 'Notifications',
+              items: [
+                _SettingsTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: 'Push Notifications',
+                  subtitle: 'Chat, mentions and reminders',
+                  trailing: Switch(
+                    value: pushEnabled,
+                    onChanged: (v) =>
+                        SettingsService.setPushNotifications(ref, v),
+                    activeThumbColor: baseColor1,
+                  ),
+                ),
+                _SettingsTile(
+                  icon: Icons.campaign_outlined,
+                  title: 'Project Alerts',
+                  subtitle: 'Deadlines and status changes',
+                  trailing: Switch(
+                    value: projectAlerts,
+                    onChanged: (v) => SettingsService.setProjectAlerts(ref, v),
+                    activeThumbColor: baseColor1,
                   ),
                 ),
               ],
@@ -72,27 +111,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           FadeInLeft(
             delay: const Duration(milliseconds: 200),
             child: _Section(
-              title: 'Notifications',
+              title: 'Account',
               items: [
                 _SettingsTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Push Notifications',
-                  subtitle: 'Manage notification preferences',
-                  trailing: Switch(
-                    value: pushEnabled,
-                    onChanged: (v) => SettingsService.setPushNotifications(ref, v),
-                    activeColor: baseColor1,
-                  ),
+                  icon: Icons.person_outline,
+                  title: 'Edit Profile',
+                  subtitle: 'Name, contact details, department',
+                  onTap: () => Get.to(() => const ProfileScreen()),
                 ),
                 _SettingsTile(
-                  icon: Icons.campaign_outlined,
-                  title: 'Project Alerts',
-                  subtitle: 'Deadline and status updates',
-                  trailing: Switch(
-                    value: projectAlertsEnabled,
-                    onChanged: (v) => SettingsService.setProjectAlerts(ref, v),
-                    activeColor: baseColor1,
-                  ),
+                  icon: Icons.lock_outline,
+                  title: 'Change Password',
+                  subtitle: 'Update your sign-in password',
+                  onTap: () => Get.to(() => const ChangePasswordScreen()),
+                ),
+                _SettingsTile(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: 'View recent activity',
+                  onTap: () => Get.to(() => const NotificationsScreen()),
                 ),
               ],
             ),
@@ -101,25 +138,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           FadeInLeft(
             delay: const Duration(milliseconds: 300),
             child: _Section(
-              title: 'Account',
+              title: 'About',
               items: [
                 _SettingsTile(
-                  icon: Icons.security,
-                  title: 'Security',
-                  subtitle: 'Password and authentication',
-                  onTap: () => _showChangePasswordDialog(context),
-                ),
-                _SettingsTile(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  subtitle: 'FAQs and contact support',
-                  onTap: () => _showHelpDialog(context),
-                ),
-                _SettingsTile(
                   icon: Icons.info_outline,
-                  title: 'About',
-                  subtitle: 'SynthInnoTech v1.0.0',
-                  onTap: () => _showAboutDialog(context),
+                  title: 'About SynthInnoTech',
+                  subtitle: 'Version 1.0.0',
+                  onTap: () => _showAbout(context),
+                ),
+                _SettingsTile(
+                  icon: Db.enabled ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                  title: 'Backend status',
+                  subtitle: Db.enabled
+                      ? 'Firebase connected'
+                      : 'Firebase not configured — see SETUP.md',
                 ),
               ],
             ),
@@ -134,152 +166,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showChangePasswordDialog(BuildContext context) {
-    final currentCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isSaving = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Change Password',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: currentCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Current password'),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Required' : null,
-                ),
-                TextFormField(
-                  controller: newCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'New password'),
-                  validator: (v) => v == null || v.length < 6
-                      ? 'At least 6 characters'
-                      : null,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user == null || user.email == null) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Password change isn\'t available for this account')),
-                        );
-                        return;
-                      }
-                      setDialogState(() => isSaving = true);
-                      try {
-                        final cred = EmailAuthProvider.credential(
-                            email: user.email!, password: currentCtrl.text);
-                        await user.reauthenticateWithCredential(cred);
-                        await user.updatePassword(newCtrl.text);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Password updated successfully')),
-                          );
-                        }
-                      } on FirebaseAuthException catch (e) {
-                        setDialogState(() => isSaving = false);
-                        final message = e.code == 'wrong-password' ||
-                                e.code == 'invalid-credential'
-                            ? 'Current password is incorrect'
-                            : 'Could not update password: ${e.message}';
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx)
-                              .showSnackBar(SnackBar(content: Text(message)));
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Update', style: GoogleFonts.inter(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Help & Support', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Frequently asked questions:',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-            const SizedBox(height: 8),
-            Text(
-              '• How do I add a new project or employee?\n'
-              '  Use the Quick Actions on the Home tab.\n\n'
-              '• How do I switch between light and dark mode?\n'
-              '  Toggle it under Settings > Appearance.\n\n'
-              '• How do I reset my password?\n'
-              '  Use Settings > Security > Change Password.',
-              style: GoogleFonts.inter(fontSize: 13, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'For anything else, please contact your workspace administrator.',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: GoogleFonts.inter(color: baseColor1)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
+  void _showAbout(BuildContext context) {
     showAboutDialog(
       context: context,
       applicationName: 'SynthInnoTech',
       applicationVersion: '1.0.0',
-      applicationIcon: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [baseColor1, baseColor2]),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.business, color: Colors.white),
+      applicationIcon: const CircleAvatar(
+        backgroundImage: AssetImage('assets/images/logo.png'),
       ),
       children: [
+        const SizedBox(height: 12),
         Text(
-          'SynthInnoTech Company Management App — manage employees, projects, finances and team communication in one place.',
+          'Company management for projects, people, finance, attendance, '
+          'leave, announcements and team chat.',
           style: GoogleFonts.inter(fontSize: 13, height: 1.5),
         ),
       ],
@@ -288,74 +187,76 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _ProfileCard extends StatelessWidget {
-  final dynamic user;
-  final bool isDark;
-  const _ProfileCard({required this.user, required this.isDark});
+  final AppUser? user;
+  final VoidCallback onTap;
+  const _ProfileCard({required this.user, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [baseColor1, baseColor2],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: Colors.white.withAlpha(40),
-            child: Text(
-              user?.name?.isNotEmpty == true
-                  ? user!.name[0].toUpperCase()
-                  : 'S',
-              style: GoogleFonts.inter(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white),
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [baseColor1, baseColor2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.name ?? 'User',
-                  style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white),
-                ),
-                Text(
-                  user?.email ?? '',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, color: Colors.white70),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(40),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    (user?.role ?? 'employee').toUpperCase(),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: Colors.white.withValues(alpha: 0.16),
+              child: Text(
+                user?.initial ?? 'U',
+                style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.name ?? 'User',
                     style: GoogleFonts.inter(
-                        fontSize: 10,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Colors.white),
                   ),
-                ),
-              ],
+                  Text(
+                    user?.email ?? '',
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      (user?.appRole.label ?? 'Employee').toUpperCase(),
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white70),
+          ],
+        ),
       ),
     );
   }
@@ -379,7 +280,7 @@ class _Section extends StatelessWidget {
             style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface.withAlpha(160),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 letterSpacing: 0.5),
           ),
         ),
@@ -389,7 +290,7 @@ class _Section extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                  color: colorScheme.onSurface.withAlpha(8),
+                  color: colorScheme.onSurface.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2)),
             ],
@@ -422,20 +323,25 @@ class _SettingsTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: colorScheme.primary.withAlpha(20),
+          color: colorScheme.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 20, color: colorScheme.primary),
       ),
       title: Text(title,
           style: GoogleFonts.inter(
-              fontSize: 15, fontWeight: FontWeight.w500,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
               color: colorScheme.onSurface)),
       subtitle: Text(subtitle,
           style: GoogleFonts.inter(
-              fontSize: 12, color: colorScheme.onSurface.withAlpha(140))),
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.55))),
       trailing: trailing ??
-          Icon(Icons.chevron_right, color: colorScheme.onSurface.withAlpha(100)),
+          (onTap != null
+              ? Icon(Icons.chevron_right,
+                  color: colorScheme.onSurface.withValues(alpha: 0.4))
+              : null),
       onTap: onTap,
     );
   }
@@ -456,9 +362,7 @@ class _LogoutButton extends StatelessWidget {
         label: Text(
           'Sign Out',
           style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.red),
+              fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red),
         ),
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Colors.red, width: 1.5),
@@ -480,17 +384,16 @@ class _LogoutButton extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: Colors.grey)),
+            child:
+                Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ref.read(loginViewModelProvider.notifier).logout();
-              Get.offAll(() => const LoginPage());
+              await ref.read(loginViewModelProvider.notifier).logout();
+              Get.until((route) => route.isFirst);
             },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Sign Out',
                 style: GoogleFonts.inter(color: Colors.white)),
           ),

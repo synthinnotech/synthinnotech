@@ -32,7 +32,7 @@ class AppEmptyState extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.1),
+                  color: colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 48, color: colorScheme.primary),
@@ -52,7 +52,7 @@ class AppEmptyState extends StatelessWidget {
                 subtitle,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: colorScheme.onSurface.withOpacity(0.6),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),

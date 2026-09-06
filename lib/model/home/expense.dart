@@ -1,3 +1,5 @@
+import 'package:synthinnotech/core/data/db.dart';
+
 enum TransactionType { income, expense }
 
 extension TransactionTypeExt on TransactionType {
@@ -32,9 +34,7 @@ class Expense {
         title: json['title'] ?? json['description'] ?? '',
         amount: (json['amount'] as num?)?.toDouble() ?? 0,
         category: json['category'] ?? '',
-        date: json['date'] != null
-            ? DateTime.tryParse(json['date'].toString()) ?? DateTime.now()
-            : DateTime.now(),
+        date: Db.readDate(json['date']) ?? DateTime.now(),
         type: json['type'] == 'income'
             ? TransactionType.income
             : TransactionType.expense,

@@ -20,8 +20,9 @@ class ChatScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('Messages',
             style: GoogleFonts.inter(
-                fontSize: 20, fontWeight: FontWeight.w700)),
-        automaticallyImplyLeading: false,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.white)),
       ),
       body: user == null
           ? Center(

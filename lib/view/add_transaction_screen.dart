@@ -338,7 +338,7 @@ class _CategoryDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       style: GoogleFonts.inter(fontSize: 15, color: colorScheme.onSurface),
       decoration: InputDecoration(

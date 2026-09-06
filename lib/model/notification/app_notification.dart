@@ -1,3 +1,5 @@
+import 'package:synthinnotech/core/data/db.dart';
+
 class AppNotification {
   final String id;
   final String title;
@@ -34,10 +36,8 @@ class AppNotification {
         body: json['body'] ?? '',
         type: json['type'] ?? 'general',
         isRead: json['is_read'] ?? false,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
-            : DateTime.now(),
-        data: json['data'] as Map<String, dynamic>?,
+        createdAt: Db.readDate(json['created_at']) ?? DateTime.now(),
+        data: (json['data'] as Map?)?.cast<String, dynamic>(),
       );
 
   Map<String, dynamic> toJson() => {

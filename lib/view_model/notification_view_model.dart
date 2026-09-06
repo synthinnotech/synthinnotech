@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/model/notification/app_notification.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/service/notification_center.dart';
 
 class NotificationsState {
   final bool isLoading;
@@ -23,38 +28,51 @@ class NotificationsState {
 }
 
 class NotificationsViewModel extends StateNotifier<NotificationsState> {
-  NotificationsViewModel()
-      : super(const NotificationsState(isLoading: true)) {
-    _load();
+  StreamSubscription<List<AppNotification>>? _sub;
+
+  NotificationsViewModel() : super(const NotificationsState(isLoading: true)) {
+    if (Db.enabled) {
+      _sub = NotificationCenter.watchMine().listen(
+        (list) =>
+            state = NotificationsState(isLoading: false, notifications: list),
+        onError: (_) => state = state.copyWith(isLoading: false),
+      );
+    } else {
+      state = const NotificationsState(isLoading: false, notifications: []);
+    }
   }
 
-  void _load() {
-    state = state.copyWith(
-      isLoading: false,
-      notifications: _mockNotifications(),
-    );
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   void markAsRead(String id) {
+    // Optimistic; Firestore stream will reconcile.
     state = state.copyWith(
       notifications: state.notifications
           .map((n) => n.id == id ? n.copyWith(isRead: true) : n)
           .toList(),
     );
+    if (Db.enabled) NotificationCenter.markRead(id);
   }
 
   void markAllRead() {
+    final unreadIds =
+        state.notifications.where((n) => !n.isRead).map((n) => n.id).toList();
     state = state.copyWith(
       notifications:
           state.notifications.map((n) => n.copyWith(isRead: true)).toList(),
     );
+    if (Db.enabled) NotificationCenter.markAllRead(unreadIds);
   }
 
   void delete(String id) {
     state = state.copyWith(
-      notifications:
-          state.notifications.where((n) => n.id != id).toList(),
+      notifications: state.notifications.where((n) => n.id != id).toList(),
     );
+    if (Db.enabled) NotificationCenter.delete(id);
   }
 
   void addNotification(AppNotification notification) {
@@ -63,51 +81,12 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
     );
   }
 
-  List<AppNotification> _mockNotifications() => [
-        AppNotification(
-          id: 'n1',
-          title: 'Project Update',
-          body: 'Mobile App Redesign progress updated to 75%',
-          type: 'project',
-          isRead: false,
-          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-        ),
-        AppNotification(
-          id: 'n2',
-          title: 'Payment Received',
-          body: 'Client payment of ₹25,000 received from TechCorp',
-          type: 'finance',
-          isRead: false,
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        ),
-        AppNotification(
-          id: 'n3',
-          title: 'New Employee',
-          body: 'Kavya Reddy has joined as Backend Intern',
-          type: 'employee',
-          isRead: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-        AppNotification(
-          id: 'n4',
-          title: 'Deadline Alert',
-          body: 'E-commerce Platform deadline was 2 days ago',
-          type: 'project',
-          isRead: false,
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        AppNotification(
-          id: 'n5',
-          title: 'Monthly Report',
-          body: 'December financial report is ready for review',
-          type: 'finance',
-          isRead: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-      ];
 }
 
 final notificationsViewModelProvider =
-    StateNotifierProvider<NotificationsViewModel, NotificationsState>(
-  (ref) => NotificationsViewModel(),
-);
+    StateNotifierProvider<NotificationsViewModel, NotificationsState>((ref) {
+  // Rebuild (and re-subscribe) whenever the signed-in user changes so the
+  // feed is always scoped to the current account.
+  ref.watch(currentUserProvider.select((u) => u?.uid));
+  return NotificationsViewModel();
+});

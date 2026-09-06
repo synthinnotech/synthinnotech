@@ -2,11 +2,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/application/onboarding_prefs.dart';
 import 'package:synthinnotech/service/police_service.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/login_page.dart';
 
 class PolicyAcceptanceScreen extends ConsumerWidget {
   const PolicyAcceptanceScreen({super.key});
@@ -134,10 +134,10 @@ class PolicyAcceptanceScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: canContinue
                       ? () async {
-                          final pref = await SharedPreferences.getInstance();
-                          await pref.setBool('policy', true);
-                          Get.off(() => LoginPage(),
-                              transition: Transition.downToUp);
+                          await OnboardingPrefs.setPolicyAccepted();
+                          ref.invalidate(policyAcceptedProvider);
+                          // Pop back to AuthGate, which now routes to sign-in.
+                          Get.back();
                         }
                       : null,
                   style: ElevatedButton.styleFrom(

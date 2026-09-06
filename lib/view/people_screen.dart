@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/core/data/db.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 import 'package:synthinnotech/model/employee/employee_model.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/presentation/register_staff_screen.dart';
 import 'package:synthinnotech/view/add_employee_screen.dart';
 import 'package:synthinnotech/view/employee_detail_screen.dart';
 import 'package:synthinnotech/view_model/employee_view_model.dart';
@@ -14,10 +18,23 @@ import 'package:synthinnotech/widget/common/app_loading.dart';
 class PeopleScreen extends ConsumerWidget {
   const PeopleScreen({super.key});
 
+  void _addMember() {
+    // Prefer creating a real sign-in account when Firebase is available;
+    // fall back to a directory-only record otherwise.
+    Get.to(
+      () => Db.enabled
+          ? const RegisterStaffScreen()
+          : const AddEmployeeScreen(),
+      transition: Transition.downToUp,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(employeesViewModelProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final canManage =
+        ref.watch(currentUserProvider)?.can(Permission.manageEmployees) ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -27,13 +44,12 @@ class PeopleScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w700,
                 color: Colors.white)),
         actions: [
-          IconButton(
-            onPressed: () => Get.to(
-              () => const AddEmployeeScreen(),
-              transition: Transition.downToUp,
+          if (canManage)
+            IconButton(
+              onPressed: _addMember,
+              icon:
+                  const Icon(Icons.person_add_outlined, color: Colors.white),
             ),
-            icon: const Icon(Icons.person_add_outlined, color: Colors.white),
-          ),
         ],
       ),
       body: state.isLoading
@@ -57,12 +73,10 @@ class PeopleScreen extends ConsumerWidget {
                         ? AppEmptyState(
                             icon: Icons.people_outline,
                             title: 'No Members',
-                            subtitle: 'No people in this category',
-                            actionLabel: 'Add Employee',
-                            onAction: () => Get.to(
-                              () => const AddEmployeeScreen(),
-                              transition: Transition.downToUp,
-                            ),
+                            subtitle: state.error ??
+                                'No people in this category yet',
+                            actionLabel: canManage ? 'Add Member' : null,
+                            onAction: canManage ? _addMember : null,
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -77,20 +91,19 @@ class PeopleScreen extends ConsumerWidget {
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 65),
-        child: FloatingActionButton.extended(
-          onPressed: () => Get.to(
-            () => const AddEmployeeScreen(),
-            transition: Transition.downToUp,
-          ),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.person_add),
-          label: Text('Add Member',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        ),
-      ),
+      floatingActionButton: canManage
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 65),
+              child: FloatingActionButton.extended(
+                onPressed: _addMember,
+                backgroundColor: colorScheme.primary,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.person_add),
+                label: Text('Add Member',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
+            )
+          : null,
     );
   }
 }

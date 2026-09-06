@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:synthinnotech/model/employee/employee_model.dart';
 import 'package:synthinnotech/model/home/project.dart';
 import 'package:synthinnotech/model/home/task_model.dart';
+import 'package:synthinnotech/service/notification_center.dart';
 import 'package:synthinnotech/view/edit_project_screen.dart';
+import 'package:synthinnotech/view_model/employee_view_model.dart';
 import 'package:synthinnotech/view_model/project_view_model.dart';
 import 'package:synthinnotech/view_model/task_view_model.dart';
 
@@ -332,16 +335,27 @@ class ProjectDetailScreen extends ConsumerWidget {
 
   void _showAddTaskSheet(
       BuildContext context, WidgetRef ref, Project current) {
+    final employees = ref.read(employeesViewModelProvider).employees;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddTaskSheet(
         projectId: current.id,
+        projectName: current.name,
         projectStart: current.startDate,
         projectDeadline: current.deadline,
+        employees: employees,
         onSave: (task) async {
           await ref.read(tasksProvider(current.id).notifier).addTask(task);
+          if (task.assigneeId != null && task.assigneeId!.isNotEmpty) {
+            NotificationCenter.pushTo(
+              uid: task.assigneeId!,
+              title: 'New task assigned',
+              body: '"${task.name}" in ${current.name}',
+              type: 'project',
+            );
+          }
         },
       ),
     );
@@ -936,12 +950,16 @@ class _TaskTile extends StatelessWidget {
 
 class _AddTaskSheet extends StatefulWidget {
   final String projectId;
+  final String projectName;
   final DateTime? projectStart;
   final DateTime? projectDeadline;
+  final List<EmployeeModel> employees;
   final Future<void> Function(ProjectTask) onSave;
 
   const _AddTaskSheet({
     required this.projectId,
+    required this.projectName,
+    required this.employees,
     required this.onSave,
     this.projectStart,
     this.projectDeadline,
@@ -957,6 +975,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
   late DateTime _start;
   late DateTime _end;
   TaskStatus _status = TaskStatus.todo;
+  EmployeeModel? _assignee;
   bool _saving = false;
 
   @override
@@ -1005,11 +1024,14 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
     final task = ProjectTask(
       id: '',
       projectId: widget.projectId,
+      projectName: widget.projectName,
       name: _nameCtrl.text.trim(),
       description: _descCtrl.text.trim(),
       startDate: _start,
       endDate: _end,
       status: _status,
+      assigneeId: _assignee?.id,
+      assigneeName: _assignee?.name,
     );
     await widget.onSave(task);
     if (mounted) Navigator.pop(context);
@@ -1081,6 +1103,33 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             ),
           ),
           const SizedBox(height: 12),
+          // Assignee
+          if (widget.employees.isNotEmpty)
+            DropdownButtonFormField<EmployeeModel?>(
+              initialValue: _assignee,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Assign to (optional)',
+                labelStyle: GoogleFonts.inter(fontSize: 14),
+                prefixIcon: const Icon(Icons.person_outline, size: 18),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              items: [
+                const DropdownMenuItem<EmployeeModel?>(
+                    value: null, child: Text('Unassigned')),
+                ...widget.employees.map((e) => DropdownMenuItem(
+                      value: e,
+                      child: Text(e.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontSize: 14)),
+                    )),
+              ],
+              onChanged: (v) => setState(() => _assignee = v),
+            ),
+          if (widget.employees.isNotEmpty) const SizedBox(height: 12),
           // Date row
           Row(
             children: [
