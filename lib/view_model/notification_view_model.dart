@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/model/notification/app_notification.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
 import 'package:synthinnotech/service/notification_center.dart';
 
 class NotificationsState {
@@ -83,6 +84,9 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
 }
 
 final notificationsViewModelProvider =
-    StateNotifierProvider<NotificationsViewModel, NotificationsState>(
-  (ref) => NotificationsViewModel(),
-);
+    StateNotifierProvider<NotificationsViewModel, NotificationsState>((ref) {
+  // Rebuild (and re-subscribe) whenever the signed-in user changes so the
+  // feed is always scoped to the current account.
+  ref.watch(currentUserProvider.select((u) => u?.uid));
+  return NotificationsViewModel();
+});

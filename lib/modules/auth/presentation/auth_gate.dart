@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
+import 'package:synthinnotech/model/user/app_user.dart';
 import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
 import 'package:synthinnotech/modules/auth/presentation/sign_in_screen.dart';
 import 'package:synthinnotech/view/initial_page.dart';
@@ -28,6 +30,18 @@ class _AuthGateState extends ConsumerState<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    // When the session ends while the user is deep in a pushed route, unwind
+    // back to this gate so they land on the sign-in screen, not a stale page.
+    ref.listen<AsyncValue<AppUser?>>(authUserProvider, (prev, next) {
+      final was = prev?.valueOrNull;
+      final now = next.valueOrNull;
+      if (was != null && now == null && Get.key.currentState?.canPop() == true) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => Get.until((route) => route.isFirst),
+        );
+      }
+    });
+
     final authUser = ref.watch(authUserProvider);
     final policy = ref.watch(policyAcceptedProvider);
 
