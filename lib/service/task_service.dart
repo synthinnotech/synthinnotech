@@ -1,58 +1,71 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
+import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/model/home/task_model.dart';
 import 'package:uuid/uuid.dart';
 
 class TaskService {
-  static bool get _ready => Firebase.apps.isNotEmpty;
-  static const _col = 'project_tasks';
+  static const _uuid = Uuid();
 
   static Future<List<ProjectTask>> getTasksForProject(String projectId) async {
-    if (_ready) {
-      try {
-        final snap = await FirebaseFirestore.instance
-            .collection(_col)
-            .where('project_id', isEqualTo: projectId)
-            .orderBy('start_date')
-            .get();
-        return snap.docs
-            .map((d) => ProjectTask.fromJson(d.data(), d.id))
-            .toList();
-      } catch (_) {}
-    }
-    return [];
+    if (!Db.enabled) return const [];
+    return Db.guard(() async {
+      // `where` only — sort locally so a not-yet-deployed composite index
+      // cannot make tasks silently vanish.
+      final snap =
+          await Db.tasks.where('project_id', isEqualTo: projectId).get();
+      final list =
+          snap.docs.map((d) => ProjectTask.fromJson(d.data(), d.id)).toList();
+      list.sort((a, b) => a.startDate.compareTo(b.startDate));
+      return list;
+    });
+  }
+
+  static Stream<List<ProjectTask>> watchTasksForProject(String projectId) {
+    if (!Db.enabled) return Stream.value(const []);
+    return Db.guardStream(
+      Db.tasks.where('project_id', isEqualTo: projectId).snapshots().map((s) {
+        final list =
+            s.docs.map((d) => ProjectTask.fromJson(d.data(), d.id)).toList();
+        list.sort((a, b) => a.startDate.compareTo(b.startDate));
+        return list;
+      }),
+    );
+  }
+
+  /// Tasks assigned to a specific person, across every project.
+  static Future<List<ProjectTask>> getTasksForAssignee(String uid) async {
+    if (!Db.enabled) return const [];
+    return Db.guard(() async {
+      final snap = await Db.tasks.where('assignee_id', isEqualTo: uid).get();
+      final list =
+          snap.docs.map((d) => ProjectTask.fromJson(d.data(), d.id)).toList();
+      list.sort((a, b) => a.endDate.compareTo(b.endDate));
+      return list;
+    });
   }
 
   static Future<ProjectTask> addTask(ProjectTask task) async {
-    final id = task.id.isEmpty ? const Uuid().v4() : task.id;
-    final data = {
-      ...task.toJson(),
-      'created_at': DateTime.now().toIso8601String(),
-    };
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).set(data);
-      } catch (_) {}
-    }
-    return ProjectTask.fromJson(data, id);
+    final id = task.id.isEmpty ? _uuid.v4() : task.id;
+    if (!Db.enabled) return ProjectTask.fromJson(task.toJson(), id);
+    return Db.guard(() async {
+      await Db.tasks.doc(id).set({...task.toJson(), 'created_at': Db.now});
+      final saved = await Db.tasks.doc(id).get();
+      return ProjectTask.fromJson(saved.data() ?? task.toJson(), id);
+    });
   }
 
   static Future<void> updateTask(ProjectTask task) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance
-            .collection(_col)
-            .doc(task.id)
-            .update(task.toJson());
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() async {
+      await Db.tasks.doc(task.id).set(
+            {...task.toJson(), 'updated_at': Db.now},
+            SetOptions(merge: true),
+          );
+    });
   }
 
   static Future<void> deleteTask(String id) async {
-    if (_ready) {
-      try {
-        await FirebaseFirestore.instance.collection(_col).doc(id).delete();
-      } catch (_) {}
-    }
+    if (!Db.enabled) return;
+    return Db.guard(() => Db.tasks.doc(id).delete());
   }
 }

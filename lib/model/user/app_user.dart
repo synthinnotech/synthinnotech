@@ -1,3 +1,6 @@
+import 'package:synthinnotech/core/data/db.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
+
 class AppUser {
   final String uid;
   final String name;
@@ -34,7 +37,13 @@ class AppUser {
   });
 
   String get staffName => name;
-  bool get isAdminUser => role == 'admin';
+
+  AppRole get appRole => AppRoleX.fromWire(role);
+  bool get isAdminUser => appRole.isAdmin;
+  bool get isManagerOrAbove => appRole.isManagerOrAbove;
+
+  bool can(Permission permission) => Rbac.can(appRole, permission);
+  String get initial => name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
         uid: json['uid'] ?? json['id']?.toString() ?? '',
@@ -51,12 +60,7 @@ class AppUser {
         gender: json['gender'],
         dateOfBirth: json['dob'] ?? json['date_of_birth'],
         dateOfJoining: json['doj'] ?? json['date_of_joining'],
-        createdAt: json['created_at'] != null
-            ? (json['created_at'] is int
-                ? DateTime.fromMillisecondsSinceEpoch(
-                    (json['created_at'] as int) * 1000)
-                : DateTime.tryParse(json['created_at'].toString()))
-            : null,
+        createdAt: Db.readDate(json['created_at']),
       );
 
   Map<String, dynamic> toJson() => {

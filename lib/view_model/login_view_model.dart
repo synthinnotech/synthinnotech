@@ -1,17 +1,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:synthinnotech/model/login/login_request.dart';
+import 'package:synthinnotech/core/errors/app_exception.dart';
 import 'package:synthinnotech/model/login/login_state.dart';
 import 'package:synthinnotech/model/user/app_user.dart';
-import 'package:synthinnotech/service/auth_service.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/data/auth_repository.dart';
 
+/// Compatibility bridge.
+///
+/// The real auth engine now lives in `lib/modules/auth`. This keeps the
+/// long-standing `loginViewModelProvider` / `LoginState.user` API that the
+/// existing screens read, but wires it to [AuthRepository] +
+/// [authUserProvider] so `state.user` always reflects the live Firebase auth
+/// state.
 class LoginViewModel extends StateNotifier<LoginState> {
-  final AuthService _authService;
+  LoginViewModel(this._repo) : super(const LoginState());
 
-  LoginViewModel(this._authService) : super(const LoginState());
+  final AuthRepository _repo;
 
-  void togglePasswordVisibility() {
-    state = state.copyWith(isPasswordVisible: !state.isPasswordVisible);
+  void setUser(AppUser? user) {
+    state = LoginState(
+      user: user,
+      isLoading: false,
+      isPasswordVisible: state.isPasswordVisible,
+    );
   }
+
+  /// Legacy entry point kept for callers that pre-loaded a cached user.
+  void loadUser(AppUser user) => setUser(user);
+
+  void togglePasswordVisibility() =>
+      state = state.copyWith(isPasswordVisible: !state.isPasswordVisible);
 
   void clearError() {
     if (state.errorMessage != null) {
@@ -23,51 +41,32 @@ class LoginViewModel extends StateNotifier<LoginState> {
     }
   }
 
-  void loadUser(AppUser user) {
-    state = state.copyWith(user: user, isLoading: false);
-  }
-
-  void logout() {
-    state = const LoginState();
-    _authService.logout();
-  }
-
   Future<void> login(String email, String password) async {
-    if (email.isEmpty || password.isEmpty) {
-      state = state.copyWith(errorMessage: 'Please fill in all fields!');
-      return;
-    }
-    if (!_isValidEmail(email)) {
-      state = state.copyWith(errorMessage: 'Please enter a valid email!');
-      return;
-    }
-    if (password.length < 6) {
-      state = state.copyWith(
-          errorMessage: 'Password must be at least 6 characters!');
-      return;
-    }
-    state = LoginState(
-      isLoading: true,
-      isPasswordVisible: state.isPasswordVisible,
-      user: state.user,
-    );
+    state = LoginState(isLoading: true, isPasswordVisible: state.isPasswordVisible);
     try {
-      final request = LoginRequest(email: email, password: password);
-      final user = await _authService.login(request);
+      final user = await _repo.signIn(email: email, password: password);
       state = state.copyWith(isLoading: false, user: user);
-    } catch (e) {
+    } on AppException catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (_) {
       state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-      );
+          isLoading: false, errorMessage: 'Sign in failed. Please try again.');
     }
   }
 
-  bool _isValidEmail(String email) =>
-      RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  Future<void> logout() async {
+    await _repo.signOut();
+    state = const LoginState();
+  }
 }
 
 final loginViewModelProvider =
     StateNotifierProvider<LoginViewModel, LoginState>((ref) {
-  return LoginViewModel(ref.read(authServiceProvider));
+  final vm = LoginViewModel(ref.watch(authRepositoryProvider));
+  ref.listen<AsyncValue<AppUser?>>(
+    authUserProvider,
+    (_, next) => vm.setUser(next.valueOrNull),
+    fireImmediately: true,
+  );
+  return vm;
 });

@@ -1,30 +1,38 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic smoke test for the SynthInnoTech app shell.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/core/rbac/app_role.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('RBAC: only admins manage employees', () {
+    expect(Rbac.can(AppRole.admin, Permission.manageEmployees), isTrue);
+    expect(Rbac.can(AppRole.manager, Permission.manageEmployees), isFalse);
+    expect(Rbac.can(AppRole.employee, Permission.manageEmployees), isFalse);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('RBAC: managers and admins manage finance', () {
+    expect(Rbac.can(AppRole.admin, Permission.manageFinance), isTrue);
+    expect(Rbac.can(AppRole.manager, Permission.manageFinance), isTrue);
+    expect(Rbac.can(AppRole.intern, Permission.manageFinance), isFalse);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('AppRole.fromWire tolerates legacy values', () {
+    expect(AppRoleX.fromWire('admin'), AppRole.admin);
+    expect(AppRoleX.fromWire(true), AppRole.admin);
+    expect(AppRoleX.fromWire('manager'), AppRole.manager);
+    expect(AppRoleX.fromWire(null), AppRole.employee);
+    expect(AppRoleX.fromWire('anything-else'), AppRole.employee);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('MaterialApp builds inside a ProviderScope', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: Text('SynthInnoTech'))),
+      ),
+    );
+    expect(find.text('SynthInnoTech'), findsOneWidget);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:synthinnotech/core/data/db.dart';
 
 enum TaskStatus { todo, inProgress, done, cancelled }
 
@@ -51,6 +52,9 @@ class ProjectTask {
   final DateTime startDate;
   final DateTime endDate;
   final TaskStatus status;
+  final String? assigneeId;
+  final String? assigneeName;
+  final String? projectName;
   final DateTime? createdAt;
 
   ProjectTask({
@@ -61,8 +65,16 @@ class ProjectTask {
     required this.startDate,
     required this.endDate,
     this.status = TaskStatus.todo,
+    this.assigneeId,
+    this.assigneeName,
+    this.projectName,
     this.createdAt,
   });
+
+  bool get isOverdue =>
+      status != TaskStatus.done &&
+      status != TaskStatus.cancelled &&
+      endDate.isBefore(DateTime.now());
 
   factory ProjectTask.fromJson(Map<String, dynamic> json, String id) =>
       ProjectTask(
@@ -70,14 +82,14 @@ class ProjectTask {
         projectId: json['project_id'] ?? '',
         name: json['name'] ?? '',
         description: json['description'] ?? '',
-        startDate: DateTime.tryParse(json['start_date']?.toString() ?? '') ??
-            DateTime.now(),
-        endDate: DateTime.tryParse(json['end_date']?.toString() ?? '') ??
+        startDate: Db.readDate(json['start_date']) ?? DateTime.now(),
+        endDate: Db.readDate(json['end_date']) ??
             DateTime.now().add(const Duration(days: 7)),
         status: _parseStatus(json['status']),
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'].toString())
-            : null,
+        assigneeId: json['assignee_id'],
+        assigneeName: json['assignee_name'],
+        projectName: json['project_name'],
+        createdAt: Db.readDate(json['created_at']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -87,6 +99,9 @@ class ProjectTask {
         'start_date': startDate.toIso8601String(),
         'end_date': endDate.toIso8601String(),
         'status': status.name,
+        'assignee_id': assigneeId,
+        'assignee_name': assigneeName,
+        'project_name': projectName,
         'created_at': createdAt?.toIso8601String(),
       };
 
@@ -96,6 +111,9 @@ class ProjectTask {
     DateTime? startDate,
     DateTime? endDate,
     TaskStatus? status,
+    String? assigneeId,
+    String? assigneeName,
+    String? projectName,
   }) =>
       ProjectTask(
         id: id,
@@ -105,6 +123,9 @@ class ProjectTask {
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,
         status: status ?? this.status,
+        assigneeId: assigneeId ?? this.assigneeId,
+        assigneeName: assigneeName ?? this.assigneeName,
+        projectName: projectName ?? this.projectName,
         createdAt: createdAt,
       );
 

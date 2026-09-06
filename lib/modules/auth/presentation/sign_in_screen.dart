@@ -3,28 +3,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:synthinnotech/core/data/db.dart';
 import 'package:synthinnotech/main.dart';
+import 'package:synthinnotech/modules/auth/application/auth_providers.dart';
+import 'package:synthinnotech/modules/auth/presentation/forgot_password_screen.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/main_navigation_screen.dart';
-import 'package:synthinnotech/view_model/login_view_model.dart';
 import 'package:synthinnotech/widget/login/custom_text_field.dart';
 import 'package:synthinnotech/widget/login/login_error_widget.dart';
 import 'package:synthinnotech/widget/simple_badge.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+/// Sign-in screen. Navigation on success is handled centrally by [AuthGate]
+/// (which listens to the auth stream) — this screen just submits credentials.
+class SignInScreen extends ConsumerStatefulWidget {
+  const SignInScreen({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage>
+class _SignInScreenState extends ConsumerState<SignInScreen>
     with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  late AnimationController _floatingController;
-  late Animation<double> _floatingAnimation;
+  late final AnimationController _floatingController;
+  late final Animation<double> _floatingAnimation;
 
   @override
   void initState() {
@@ -33,13 +36,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
-    _floatingAnimation = Tween<double>(
-      begin: -10.0,
-      end: 10.0,
-    ).animate(CurvedAnimation(
-      parent: _floatingController,
-      curve: Curves.easeInOut,
-    ));
+    _floatingAnimation = Tween<double>(begin: -10.0, end: 10.0).animate(
+      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -50,17 +49,20 @@ class _LoginPageState extends ConsumerState<LoginPage>
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    await ref.read(signInControllerProvider.notifier).submit(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+    // AuthGate reacts to the auth stream — no manual navigation here.
+  }
+
   @override
   Widget build(BuildContext context) {
-    final loginState = ref.watch(loginViewModelProvider);
-    final loginViewModel = ref.read(loginViewModelProvider.notifier);
-    bool isDark = ref.watch(ThemeService.isDarkTheme);
-
-    ref.listen(loginViewModelProvider, (previous, next) {
-      if (next.user != null) {
-        Get.offAll(() => MainNavigationScreen(), transition: Transition.zoom);
-      }
-    });
+    final state = ref.watch(signInControllerProvider);
+    final controller = ref.read(signInControllerProvider.notifier);
+    final isDark = ref.watch(ThemeService.isDarkTheme);
 
     return Scaffold(
       body: SafeArea(
@@ -72,39 +74,37 @@ class _LoginPageState extends ConsumerState<LoginPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
                   FadeInDown(
                     duration: const Duration(milliseconds: 800),
                     child: AnimatedBuilder(
                       animation: _floatingAnimation,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(0, _floatingAnimation.value),
-                          child: Container(
-                            width: 85,
-                            height: 85,
-                            clipBehavior: Clip.hardEdge,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(50),
-                              color: baseColor1,
-                              border: Border.all(color: baseColor1, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: baseColor1.withAlpha(80),
-                                  blurRadius: 5,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
+                      builder: (context, child) => Transform.translate(
+                        offset: Offset(0, _floatingAnimation.value),
+                        child: child,
+                      ),
+                      child: Container(
+                        width: 85,
+                        height: 85,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(50),
+                          color: baseColor1,
+                          border: Border.all(color: baseColor1, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: baseColor1.withAlpha(80),
+                              blurRadius: 5,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 1),
                             ),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundImage:
-                                  AssetImage('assets/images/logo.png'),
-                            ),
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                        child: const CircleAvatar(
+                          radius: 50,
+                          backgroundImage: AssetImage('assets/images/logo.png'),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -137,7 +137,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           style: GoogleFonts.inter(
                             fontSize: 15,
                             color: Colors.grey[600],
-                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
@@ -149,14 +148,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     child: Container(
                       padding: const EdgeInsets.all(26),
                       decoration: BoxDecoration(
-                        color:
-                            isDark ? Colors.grey.withAlpha(50) : Colors.white,
+                        color: isDark ? Colors.grey.withAlpha(50) : Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(50),
                             blurRadius: 5,
-                            spreadRadius: 0,
                             offset: const Offset(0, 1),
                           ),
                         ],
@@ -195,7 +192,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               hint: 'Enter your email',
                               icon: Icons.alternate_email,
                               keyboardType: TextInputType.emailAddress,
-                              onChanged: (_) => loginViewModel.clearError(),
+                              onChanged: (_) => controller.clearError(),
                             ),
                             const SizedBox(height: 20),
                             CustomTextField(
@@ -204,82 +201,88 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               hint: 'Enter your password',
                               icon: Icons.key,
                               isPassword: true,
-                              isPasswordVisible: loginState.isPasswordVisible,
-                              onTogglePassword: () =>
-                                  loginViewModel.togglePasswordVisibility(),
-                              onChanged: (_) => loginViewModel.clearError(),
+                              isPasswordVisible: state.passwordVisible,
+                              onTogglePassword:
+                                  controller.togglePasswordVisibility,
+                              onChanged: (_) => controller.clearError(),
                             ),
-                            if (loginState.errorMessage != null) ...[
+                            if (state.error != null) ...[
                               const SizedBox(height: 16),
                               FadeIn(
-                                child: LoginErrorWidget(
-                                    message: loginState.errorMessage!),
-                              ),
+                                  child:
+                                      LoginErrorWidget(message: state.error!)),
                             ],
-                            const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                GestureDetector(
-                                  child: Text(
-                                    'Forgot Password?',
-                                    style: GoogleFonts.inter(
-                                      color: baseColor1,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () => Get.to(
+                                  () => const ForgotPasswordScreen(),
+                                  transition: Transition.rightToLeft,
+                                ),
+                                child: Text(
+                                  'Forgot Password?',
+                                  style: GoogleFonts.inter(
+                                    color: baseColor1,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 32),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
+                            const SizedBox(height: 16),
+                            SizedBox(
                               width: double.infinity,
                               height: 56,
                               child: ElevatedButton(
-                                onPressed: loginState.isLoading
-                                    ? null
-                                    : () {
-                                        if (_formKey.currentState!.validate()) {
-                                          loginViewModel.login(
-                                            _emailController.text.trim(),
-                                            _passwordController.text,
-                                          );
-                                        }
-                                      },
-                                child: btn(loginState.isLoading),
+                                onPressed: state.isSubmitting ? null : _submit,
+                                child: _ButtonLabel(loading: state.isSubmitting),
                               ),
                             ),
+                            if (!Db.enabled) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'Demo mode — Firebase isn\'t configured. '
+                                  'Any email + a 6+ char password works. '
+                                  'Use an email containing "admin" for admin access.',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11, color: Colors.brown[700]),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   FadeInUp(
                     delay: const Duration(milliseconds: 700),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
+                          children: const [
                             SimpleBadge(
                                 icon: Icons.shield_outlined, label: 'Secure'),
-                            const SizedBox(width: 20),
+                            SizedBox(width: 20),
                             SimpleBadge(icon: Icons.speed, label: 'Fast'),
-                            const SizedBox(width: 20),
+                            SizedBox(width: 20),
                             SimpleBadge(
                                 icon: Icons.verified_user, label: 'Trusted'),
                           ],
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          '© 2024 SynthInnoTech. All rights reserved.',
+                          '© ${DateTime.now().year} SynthInnoTech. All rights reserved.',
                           style: GoogleFonts.inter(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400),
+                              color: Colors.grey[500], fontSize: 12),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -294,45 +297,45 @@ class _LoginPageState extends ConsumerState<LoginPage>
       ),
     );
   }
+}
 
-  Widget btn(isLoading) => Container(
-        alignment: Alignment.center,
-        child: isLoading
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2.5),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Authenticating...',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.login, color: Colors.white, size: 22),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Sign In Securely',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
+class _ButtonLabel extends StatelessWidget {
+  const _ButtonLabel({required this.loading});
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2.5),
+          ),
+          const SizedBox(width: 16),
+          Text('Authenticating…',
+              style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white)),
+        ],
       );
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.login, color: Colors.white, size: 22),
+        const SizedBox(width: 12),
+        Text('Sign In Securely',
+            style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.5)),
+      ],
+    );
+  }
 }

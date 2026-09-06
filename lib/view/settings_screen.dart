@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:synthinnotech/main.dart';
 import 'package:synthinnotech/service/theme_service.dart';
-import 'package:synthinnotech/view/login_page.dart';
 import 'package:synthinnotech/view_model/login_view_model.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -316,10 +315,11 @@ class _LogoutButton extends StatelessWidget {
                 style: GoogleFonts.inter(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ref.read(loginViewModelProvider.notifier).logout();
-              Get.offAll(() => const LoginPage());
+              await ref.read(loginViewModelProvider.notifier).logout();
+              // AuthGate reacts to the auth stream; just unwind to the root.
+              Get.until((route) => route.isFirst);
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: Colors.red),

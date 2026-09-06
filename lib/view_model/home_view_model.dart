@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:synthinnotech/core/errors/app_exception.dart';
 import 'package:synthinnotech/model/home/dashboard_stats.dart';
+import 'package:synthinnotech/model/home/expense.dart';
+import 'package:synthinnotech/model/home/project.dart';
 import 'package:synthinnotech/service/employee_service.dart';
 import 'package:synthinnotech/service/finance_service.dart';
 import 'package:synthinnotech/service/project_service.dart';
-import 'package:synthinnotech/model/home/expense.dart';
-import 'package:synthinnotech/model/home/project.dart';
 
 class HomeViewModel extends StateNotifier<AsyncValue<DashboardStats>> {
   HomeViewModel() : super(const AsyncValue.loading()) {
@@ -33,7 +34,8 @@ class HomeViewModel extends StateNotifier<AsyncValue<DashboardStats>> {
       final active = projects
           .where((p) =>
               p.status == ProjectStatus.inProgress ||
-              p.status == ProjectStatus.onTrack)
+              p.status == ProjectStatus.onTrack ||
+              p.status == ProjectStatus.review)
           .length;
       final completed = projects
           .where((p) =>
@@ -49,6 +51,9 @@ class HomeViewModel extends StateNotifier<AsyncValue<DashboardStats>> {
               p.status != ProjectStatus.completed)
           .length;
 
+      final pendingBudget = projects.fold<double>(
+          0, (s, p) => s + (p.budget - p.spent).clamp(0, double.infinity));
+
       state = AsyncValue.data(DashboardStats(
         totalIncome: income,
         totalExpense: expense,
@@ -57,20 +62,22 @@ class HomeViewModel extends StateNotifier<AsyncValue<DashboardStats>> {
         activeProjects: active,
         completedProjects: completed,
         totalEmployees: employees.length,
-        pendingExpenses: expense,
-        unreadMessages: 3,
+        pendingExpenses: pendingBudget,
+        unreadMessages: 0,
         overdueTasks: overdue,
         recentProjects: projects.take(3).toList(),
         recentTransactions: transactions.take(5).toList(),
       ));
-    } catch (error, st) {
+    } on AppException catch (error, st) {
       state = AsyncValue.error(error, st);
+    } catch (error, st) {
+      state = AsyncValue.error(AppException.from(error, st), st);
     }
   }
 
-  void refresh() {
+  Future<void> refresh() async {
     state = const AsyncValue.loading();
-    _load();
+    await _load();
   }
 }
 

@@ -112,7 +112,7 @@ class InitialPage extends StatelessWidget {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    Get.off(() => PolicyAcceptanceScreen(),
+                    Get.to(() => const PolicyAcceptanceScreen(),
                         transition: Transition.rightToLeft);
                   },
                   style: ElevatedButton.styleFrom(

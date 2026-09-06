@@ -1,3 +1,5 @@
+import 'package:synthinnotech/core/data/db.dart';
+
 class ChatMessage {
   final String id;
   final String senderId;
@@ -19,9 +21,7 @@ class ChatMessage {
         senderId: json['sender_id'] ?? '',
         senderName: json['sender_name'] ?? '',
         text: json['text'] ?? '',
-        timestamp: json['timestamp'] != null
-            ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
-            : DateTime.now(),
+        timestamp: Db.readDate(json['timestamp']) ?? DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

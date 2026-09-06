@@ -1,0 +1,163 @@
+rules_version = '2';
+
+// SynthInnoTech — Firestore security rules
+// Deploy with:  firebase deploy --only firestore:rules
+// See SETUP.md for the full setup checklist.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? myUserDoc().role
+        : 'none';
+    }
+
+    function isAdmin() {
+      return myRole() == 'admin';
+    }
+
+    function isManagerOrAbove() {
+      return myRole() == 'admin' || myRole() == 'manager';
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Fields a normal user is NOT allowed to change on their own profile.
+    function onlySafeProfileFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'salary', 'is_active', 'email', 'uid']);
+    }
+
+    // ── users ────────────────────────────────────────────────────────────
+    // Any signed-in user can read the directory (needed for People / Chat).
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      // An admin can provision anyone; a brand new auth user may create their
+      // own doc but cannot self-assign a privileged role.
+      allow create: if isAdmin()
+        || (isSelf(uid)
+            && request.resource.data.get('role', 'employee') in ['employee', 'intern']);
+      allow update: if isAdmin()
+        || (isSelf(uid) && onlySafeProfileFields());
+      allow delete: if isAdmin();
+    }
+
+    // ── projects ─────────────────────────────────────────────────────────
+    match /projects/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManagerOrAbove();
+    }
+
+    // ── project_tasks ────────────────────────────────────────────────────
+    match /project_tasks/{id} {
+      allow read: if isSignedIn();
+      allow create, delete: if isManagerOrAbove();
+      // Managers edit anything; an assignee may update their own task
+      // (e.g. move status) without gaining broader rights.
+      allow update: if isManagerOrAbove()
+        || (isSignedIn() && resource.data.get('assignee_id', '') == request.auth.uid);
+    }
+
+    // ── transactions ─────────────────────────────────────────────────────
+    match /transactions/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManagerOrAbove();
+    }
+
+    // ── chats ────────────────────────────────────────────────────────────
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        function chat() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+        allow read: if isSignedIn() && request.auth.uid in chat().participants;
+        allow create: if isSignedIn()
+          && request.auth.uid in chat().participants
+          && request.resource.data.sender_id == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ── notifications ────────────────────────────────────────────────────
+    // Fan-out is done client-side and by Cloud Functions; a client may only
+    // touch notifications addressed to itself.
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn()
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_read', 'read_at']);
+      allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
+    }
+
+    // ── announcements ────────────────────────────────────────────────────
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── notes ────────────────────────────────────────────────────────────
+    match /notes/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.owner_id == request.auth.uid || resource.data.get('shared', false) == true);
+      allow create: if isSignedIn()
+        && request.resource.data.owner_id == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && resource.data.owner_id == request.auth.uid;
+    }
+
+    // ── attendance ───────────────────────────────────────────────────────
+    match /attendance/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.user_id == request.auth.uid || isManagerOrAbove());
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.user_id == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // ── leave_requests ───────────────────────────────────────────────────
+    match /leave_requests/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.user_id == request.auth.uid || isManagerOrAbove());
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending';
+      // Owner may cancel a still-pending request; managers may approve/reject.
+      allow update: if isManagerOrAbove()
+        || (isSignedIn()
+            && resource.data.user_id == request.auth.uid
+            && resource.data.status == 'pending'
+            && request.resource.data.status in ['pending', 'cancelled']);
+      allow delete: if isAdmin();
+    }
+
+    // ── _meta ────────────────────────────────────────────────────────────
+    match /_meta/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Everything else is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
